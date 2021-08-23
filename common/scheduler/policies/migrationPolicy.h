@@ -18,6 +18,7 @@ public:
     void setCurrentPerformance(double performance){ m_curr_performance = performance; }
     int getCurrentSharedSlots() const { return m_curr_shared_slots; }
     double getCurrentPerformance() const { return m_curr_performance; }
+    UInt32 getMaxSlots() const  {return m_max_slots; }
     virtual core_id_t getMigrationCandidateNonSecure(tile_id_t currentTile, const std::vector<bool> &availableCores) = 0;
     virtual tile_id_t getTileWLessThreads(tile_id_t secureThreadTile, std::vector<UInt32> activeThreadsPerTile) = 0;
     virtual core_id_t getFreeCoreOnTile(tile_id_t tileId, const std::vector<bool> &availableCores) = 0;

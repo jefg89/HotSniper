@@ -8,10 +8,12 @@ using namespace std;
 TileManager::TileManager(UInt32 numberOfTiles, UInt32 coresPerTile) {
     m_number_of_tiles = numberOfTiles;
     m_cores_per_tile = coresPerTile;
+    m_has_secure.resize(numberOfTiles);
 
     m_tiles = (Tile **)(malloc(numberOfTiles * sizeof(Tile *)));
     for (unsigned int i = 0; i < numberOfTiles; i++){
         m_tiles[i] = new Tile(i, coresPerTile);
+        m_has_secure.at(i) = false;
     }
 }
 TileManager::~TileManager() {
@@ -73,4 +75,14 @@ void TileManager::printTileInfo(){
         }
         
     }    
+}
+
+
+void TileManager::setSecure(core_id_t core_id){
+    tile_id_t tile = core_id / m_cores_per_tile; 
+    m_has_secure.at(tile) = true;
+}
+void TileManager::unsetSecure(core_id_t core_id) {
+    tile_id_t tile = core_id / m_cores_per_tile; 
+    m_has_secure.at(tile) = false;
 }

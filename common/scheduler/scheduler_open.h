@@ -78,7 +78,11 @@ class SchedulerOpen : public SchedulerPinnedBase {
 
 		ofstream migfile;
 		ofstream otherfile;
-		
+		void sleepThread(thread_id_t thread_id, SubsecondTime time);
+		void wakeThreadonCore(thread_id_t thread_id, core_id_t core_id, SubsecondTime time);
+		vector<bool> availableCores;
+		UInt32 getAvailableCoresExclTile(tile_id_t tile);
+		//UInt32 getNonSecureThreadsOnTile(tile_id_t tile);
 
 };
 

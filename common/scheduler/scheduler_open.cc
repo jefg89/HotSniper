@@ -41,6 +41,8 @@ int numberOfCores; //Stores the number of cores in the system.
 int numberOfTiles;
 int coresPerTile;
 
+int roundRobin = 0;
+
 int coreRequirementTranslation (String compositionString);
 
 //This data structure maintains the state of the tasks.
@@ -74,7 +76,7 @@ struct systemCore {
 };
 
 vector <systemCore> systemCores;
-
+queue<systemCore> sleeQueue;
 
 
 /** SchedulerOpen
@@ -126,10 +128,10 @@ SchedulerOpen::SchedulerOpen(ThreadManager *thread_manager)
 		exit (1);
 	}
 	// Thermal sim disabled
-	double ambientTemperature = Sim()->getCfg()->getFloat("periodic_thermal/ambient_temperature");
-    double maxTemperature = Sim()->getCfg()->getFloat("periodic_thermal/max_temperature");
-    double inactivePower = Sim()->getCfg()->getFloat("periodic_thermal/inactive_power");
-    double tdp = Sim()->getCfg()->getFloat("periodic_thermal/tdp");
+	//double ambientTemperature = Sim()->getCfg()->getFloat("periodic_thermal/ambient_temperature");
+    //double maxTemperature = Sim()->getCfg()->getFloat("periodic_thermal/max_temperature");
+    //double inactivePower = Sim()->getCfg()->getFloat("periodic_thermal/inactive_power");
+    //double tdp = Sim()->getCfg()->getFloat("periodic_thermal/tdp");
 	//thermalModel = new ThermalModel((unsigned int)coreRows, (unsigned int)coreColumns, Sim()->getCfg()->getString("periodic_thermal/thermal_model"), ambientTemperature, maxTemperature, inactivePower, tdp);
 
 	//Initialize the cores in the system.
@@ -192,6 +194,7 @@ SchedulerOpen::SchedulerOpen(ThreadManager *thread_manager)
 	initMappingPolicy(Sim()->getCfg()->getString("scheduler/open/logic").c_str());
 	initMigrationPolicy(Sim()->getCfg()->getString("scheduler/open/migration").c_str());
 	//initDVFSPolicy(Sim()->getCfg()->getString("scheduler/open/dvfs/logic").c_str());
+	availableCores.resize(numberOfCores);
 }
 
 /** initMappingPolicy
@@ -443,6 +446,8 @@ int SchedulerOpen::setAffinity (thread_id_t thread_id) {
 		threadSetAffinity(INVALID_THREAD_ID, thread_id, sizeof(cpu_set_t), &my_set); 
 		systemCores[coreFound].assignedThreadID = thread_id; 
 		tileManager->registerThreadOnTile(thread_id, coreFound);
+		if (Sim()->getThreadManager()->getThreadFromID(thread_id)->isSecure())
+			tileManager->setSecure(coreFound);
 	}
 
 	return coreFound;
@@ -474,8 +479,6 @@ void SchedulerOpen::migrateThread(thread_id_t thread_id, core_id_t core_id)
 			exit(1);
 		}
 		
-		tileManager->unregisterThreadOnTile(thread_id, from_core_id);
-		tileManager->registerThreadOnTile(thread_id, core_id);
 		
 		cpu_set_t my_set; 
 		CPU_ZERO(&my_set); 
@@ -484,6 +487,13 @@ void SchedulerOpen::migrateThread(thread_id_t thread_id, core_id_t core_id)
 
 		systemCores[core_id].assignedTaskID = systemCores[from_core_id].assignedTaskID;
 		systemCores[core_id].assignedThreadID = thread_id;
+
+		tileManager->unregisterThreadOnTile(thread_id, from_core_id);
+		tileManager->registerThreadOnTile(thread_id, core_id);
+		if (Sim()->getThreadManager()->getThreadFromID(thread_id)->isSecure()) {
+			tileManager->unsetSecure(from_core_id);
+			tileManager->setSecure(core_id);
+		}
 
 		systemCores[from_core_id].assignedTaskID = -1;
 		systemCores[from_core_id].assignedThreadID = -1;
@@ -519,7 +529,6 @@ bool SchedulerOpen::isAssignedToThread(int coreId) {
 }
 
 bool SchedulerOpen::executeMappingPolicy(int taskID, SubsecondTime time) {
-	vector<bool> availableCores(numberOfCores);
 	vector<bool> activeCores(numberOfCores);
 	for (int i = 0; i < numberOfCores; i++) {
 		availableCores.at(i) = m_core_mask[i] && !isAssignedToTask(i);
@@ -675,6 +684,9 @@ void SchedulerOpen::threadExit(thread_id_t thread_id, SubsecondTime time) {
 			systemCores[i].assignedThreadID = -1;
 			cout << "\n[Scheduler]: Releasing Core " << i << " from Thread " << thread_id << "\n";
 			tileManager->unregisterThreadOnTile(thread_id, i);
+			if (Sim()->getThreadManager()->getThreadFromID(thread_id)->isSecure()) {
+				tileManager->unsetSecure(i);
+			}
 			
 			cpu_set_t my_set; 
 			CPU_ZERO(&my_set); 
@@ -995,7 +1007,7 @@ void SchedulerOpen::periodic(SubsecondTime time) {
 		cout << "\n[Scheduler]: Time " << formatTime(time) << " [Active Tasks =  " << numberOfActiveTasks () << " | Completed Tasks = " <<  numberOfTasksCompleted () << " | Queued Tasks = "  << numberOfTasksInQueue () << " | Non-Queued Tasks  = " <<  numberOfTasksWaitingToSchedule () <<  " | Free Cores = " << numberOfFreeCores () << " | Active Tasks Requirements = " << totalCoreRequirementsOfActiveTasks () << " ] \n" << endl;		
 		//Following error checking code makes sure that the system state is not messed up.
 
-		if (numberOfCores - totalCoreRequirementsOfActiveTasks () != numberOfFreeCores ()) {
+/* 		if (numberOfCores - totalCoreRequirementsOfActiveTasks () != numberOfFreeCores ()) {
 			cout <<"\n[Scheduler] [Error]: Number of Free Cores + Number of Active Tasks Requirements != Number Of Cores.\n";		
 			exit (1);
 		}
@@ -1003,7 +1015,7 @@ void SchedulerOpen::periodic(SubsecondTime time) {
 		if (numberOfActiveTasks () + numberOfTasksCompleted () + numberOfTasksInQueue () + numberOfTasksWaitingToSchedule () != numberOfTasks) {
 			cout <<"\n[Scheduler] [Error]: Task State Does Not Match.\n";		
 			exit (1);
-		}
+		} */
 			cout << "[Scheduler]: Current mapping:" << endl;
 
 		for (int y = 0; y < coreRows; y++) {
@@ -1054,13 +1066,21 @@ void SchedulerOpen::periodic(SubsecondTime time) {
 		}
 	}
 
+	// if (time.getNS() == 1000000){
+	// 	sleepThread(0,time);
+	// }
+	// if (time.getNS () == 5000000)
+	// {
+	// 	wakeThreadonCore(0, 5, time);
+	// } 
+	
 	if (time.getNS () % mappingEpoch == 0) { //mappingEpoch
 		
 		cout << "\n[Scheduler]: Scheduler Invoked at " << formatTime(time) << "\n" << endl;
 		//tileManager->printTileInfo();
 		fetchTasksIntoQueue (time);
-		
 		executeMigrationPolicy(time);
+		
 				
 
 
@@ -1103,6 +1123,16 @@ std::string SchedulerOpen::formatTime(SubsecondTime time) {
 	return ss.str();
 }
 
+
+thread_id_t getRoundRobin() {
+	UInt64 numberOfThreads = Sim()->getThreadManager()->getNumThreads();
+	for (roundRobin = roundRobin  % numberOfThreads; roundRobin< numberOfThreads; roundRobin++)
+		if (!Sim()->getThreadManager()->getThreadFromID(roundRobin)->isSecure())
+			return roundRobin;
+	return INVALID_THREAD_ID;
+}
+
+
 void SchedulerOpen::initMigrationPolicy(String policyName) {
 	cout << "[Scheduler] [Info]: Initializing migration policy" << endl;
 	float alpha, beta, max_performance;
@@ -1143,7 +1173,6 @@ void SchedulerOpen::initMigrationPolicy(String policyName) {
 }
 
 void SchedulerOpen::executeMigrationPolicy(SubsecondTime time) {
-	vector<bool> availableCores(numberOfCores);
 	vector<bool> freeTiles(numberOfTiles);
 	std::vector<UInt32> sharedTimePerTile(numberOfTiles);
 	std::vector<UInt32> activeThreadsPerTile(numberOfTiles);
@@ -1157,7 +1186,37 @@ void SchedulerOpen::executeMigrationPolicy(SubsecondTime time) {
 		sharedTimePerTile.at(tile) = tileManager->getMaxSharedTimeOnTile(tile);
 		activeThreadsPerTile.at(tile) = tileManager->getActiveThreadsOnTile(tile);
 	}
-	//
+	size_t ogSleepQueueSize = sleeQueue.size();
+	//Now let's try to find free cores for each thread on sleep queue.
+	for (size_t i = 0; i < ogSleepQueueSize; i++){		
+		core_id_t candidate = INVALID_CORE_ID;
+		for  (size_t i = 0; i < numberOfTiles; i++){
+			//First find a tile with nonSecure threads on it.
+			if (!tileManager->isSecure(i)) 
+				//Then find a free core on that tile
+				candidate = migrationPolicy->getFreeCoreOnTile(i, availableCores);
+			if (candidate != INVALID_CORE_ID)
+				break;
+		}
+		// If we got a valid core, wake up the thread on available core 
+		if (candidate != INVALID_CORE_ID) 
+			wakeThreadonCore(sleeQueue.front().assignedThreadID, candidate, time);
+		//If no candidates are found (i.e., not enough resources), 
+		else {
+		//let's sleep the another non-secure thread. 
+			thread_id_t nextThread = getRoundRobin();
+			if (nextThread== INVALID_THREAD_ID){
+				cout<<"UNEXPECTED ERROR: NO VALID THREAD"<<endl;
+				exit(1);
+			}
+			candidate = Sim()->getThreadManager()->getThreadFromID(nextThread)->getCore()->getId();
+			sleepThread(nextThread,time);
+			wakeThreadonCore(sleeQueue.front().assignedThreadID, candidate, time);
+		
+
+		}
+	}
+	
 
 	for (size_t i = 0; i < Sim()->getThreadManager()->getNumThreads() ; i++){
 		//If the thread is marked as secure and is still running
@@ -1182,28 +1241,35 @@ void SchedulerOpen::executeMigrationPolicy(SubsecondTime time) {
 						cout << "Ningun candidato valido, tratando de migrar otros"<<endl;
 						// First find the least busy tile
 						tile_id_t laxTile = migrationPolicy->getTileWLessThreads(currentTile, activeThreadsPerTile);
+						
+						//Let's find the number of non-secure threads on that tile
+						//UInt32 nonSecureThreadsOnTile = getNonSecureThreadsOnTile(laxTile);
+					
 						// Then, for each other thread
 						for (size_t j = 0; j < Sim()->getThreadManager()->getNumThreads() ; j++){
-							// Make sure we do it this only for the nonsecure threads.
-							if (j != i) {
-								Thread * otherThread = Sim()->getThreadManager()->getThreadFromID((thread_id_t)j);
-								// If that thread is in fact on the least busy tile
-								if (otherThread->getTileId() == laxTile) {
+							Thread * otherThread = Sim()->getThreadManager()->getThreadFromID((thread_id_t)j);
+							// If that thread is non secure and it's on the least busy tile
+							if (otherThread->getTileId() == laxTile && !otherThread->isSecure()) {
+								// If the time shared with this other thread has expired
+								if (otherThread->getSharedSlots() >= migrationPolicy->getMaxSlots()) {
+									//Get the previous core
 									core_id_t previous = otherThread->getCore()->getId();
 									// Try to find a core on a different tile
 									core_id_t candidate = migrationPolicy->getMigrationCandidateNonSecure(laxTile, availableCores);
-									// If we got a valid core, migrate to it and update list or available cores 
+									// If we got a valid core, migrate to it and update list of available cores 
 									if (candidate != INVALID_CORE_ID) {
 										migrateThread((thread_id_t)j, candidate);
 										availableCores.at(candidate) = false;
 										availableCores.at(previous) = true;
 									}
-									// TODO: if there a no more valid cores sleep secure thread until a valid migration is possible
-									else
-										cout << "ERROR: NO MIGRATION CANDIDATE"<<endl;
+									//If no candidates are found (i.e., not enough resources), let's sleep the non-secure thread. 
+									else 
+										sleepThread(j,time);
 								}
 							}
+							
 						}
+		
 						// Lastly, migrate secure thread to newly empty tile if it's a different tile
 						// or just clean metrics if it's the one we are alredy on.
 						if (laxTile != currentTile) {
@@ -1212,8 +1278,8 @@ void SchedulerOpen::executeMigrationPolicy(SubsecondTime time) {
 						}
 						migrationPolicy->setCurrentSharedSlots(0);
 						migrationPolicy->setCurrentPerformance(0);
+							
 						
-
 					}
 					
 				}	
@@ -1272,3 +1338,58 @@ void SchedulerOpen::updateMigrationMetrics(SubsecondTime time){
 }
 
 
+void SchedulerOpen::sleepThread(thread_id_t thread_id, SubsecondTime time){
+	cout << "Sleepin thread "<< thread_id << endl;
+	core_id_t core_id = Sim()->getThreadManager()->getThreadFromID(thread_id)->getCore()->getId();
+	m_thread_info[thread_id].setCoreRunning(INVALID_CORE_ID);
+	availableCores.at(core_id) = true; 
+	tileManager->unregisterThreadOnTile(thread_id, core_id);
+	if (Sim()->getThreadManager()->getThreadFromID(thread_id)->isSecure()) {
+			tileManager->unsetSecure(core_id);
+	}
+	
+	sleeQueue.push(systemCores[core_id]);
+	systemCores[core_id].assignedTaskID = -1;
+	systemCores[core_id].assignedThreadID = -1;
+
+	// Update last scheduled out time, with a small extra penalty to make sure we don't
+	// reconsider this thread in the same periodic() call but for a next core
+	m_thread_info[thread_id].setLastScheduledOut(time + SubsecondTime::PS(core_id));
+	moveThread(thread_id, INVALID_CORE_ID, time);
+
+}
+
+void SchedulerOpen::wakeThreadonCore(thread_id_t thread_id, core_id_t core_id, SubsecondTime time){
+	cout<<"waking up thingie "<< thread_id <<endl;
+	m_thread_info[thread_id].setCoreRunning(core_id);
+	m_thread_info[thread_id].setLastScheduledIn(time);
+	tileManager->registerThreadOnTile(thread_id, core_id);
+	if (Sim()->getThreadManager()->getThreadFromID(thread_id)->isSecure()) {
+			tileManager->setSecure(core_id);
+	}
+	availableCores.at(core_id) = false; 
+	systemCores[core_id].assignedTaskID = sleeQueue.front().assignedTaskID;
+	systemCores[core_id].assignedThreadID = sleeQueue.front().assignedThreadID; 
+	sleeQueue.pop();
+	moveThread(thread_id, core_id, time);
+
+}
+
+UInt32 SchedulerOpen::getAvailableCoresExclTile(tile_id_t tile) {
+	UInt32 count = 0;
+	for (size_t i = 0; i < availableCores.size(); i++){
+		if ((systemCores[i].assignedThreadID ==-1) &&  ((i / numberOfTiles) != tile)) 
+			count++;		
+	}
+	return count;
+}
+
+// UInt32 SchedulerOpen::getNonSecureThreadsOnTile(tile_id tile){
+// 	UInt32 count = 0;
+// 	for (size_t i = 0; i < Sim()->getThreadManager()->getNumThreads(); i++){
+// 		Thread * j = Sim()->getThreadManager()->getThreadFromID(i);
+// 		if ( !j->isSecure() && j->getTileId() == tile) 
+// 			count++;		
+// 	}
+// 	return count;	
+// }

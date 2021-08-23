@@ -99,6 +99,8 @@ void Thread::setTile()
    int s_cores = atoi (Sim()->getCfg()->getString("perf_model/l2_cache/shared_cores").c_str());
    if (m_core)
       m_tile_id = m_core->getId()/s_cores; 
+   else 
+      m_tile_id = -1;
 }
 
 void Thread::incSharedSlots()
