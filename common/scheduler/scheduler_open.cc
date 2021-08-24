@@ -688,6 +688,7 @@ void SchedulerOpen::threadExit(thread_id_t thread_id, SubsecondTime time) {
 			systemCores[i].assignedThreadID = -1;
 			cout << "\n[Scheduler]: Releasing Core " << i << " from Thread " << thread_id << "\n";
 			tileManager->unregisterThreadOnTile(thread_id, i);
+			availableCores.at(i) = true;
 			if (Sim()->getThreadManager()->getThreadFromID(thread_id)->isSecure()) {
 				tileManager->unsetSecure(i);
 			}
@@ -846,25 +847,25 @@ int coreRequirementTranslation (String compositionString) {
 			int t[] = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
 			requirements.insert(requirements.end(), std::begin(t), std::end(t));
 		} else if (benchmark == "bodytrack") {
-			int t[] = {3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+			int t[] = {1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
 			requirements.insert(requirements.end(), std::begin(t), std::end(t));
 		} else if (benchmark == "canneal") {
-			int t[] = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+			int t[] = {1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
 			requirements.insert(requirements.end(), std::begin(t), std::end(t));
 		} else if (benchmark == "dedup") {
-			int t[] = {4, 7, 10, 13, 16};
+			int t[] = {1, 7, 10, 13, 16};
 			requirements.insert(requirements.end(), std::begin(t), std::end(t));
 		} else if (benchmark == "ferret") {
-			int t[] = {7, 11, 15};
+			int t[] = {1, 11, 15};
 			requirements.insert(requirements.end(), std::begin(t), std::end(t));
 		} else if (benchmark == "fluidanimate") {
-			int t[] = {2, 3, 0, 5, 0, 0, 0, 9};  // zeros are  placeholders
+			int t[] = {1, 3, 0, 5, 0, 0, 0, 9};  // zeros are  placeholders
 			requirements.insert(requirements.end(), std::begin(t), std::end(t));
 		} else if (benchmark == "streamcluster") {
-			int t[] = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+			int t[] = {1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
 			requirements.insert(requirements.end(), std::begin(t), std::end(t));
 		} else if (benchmark == "swaptions") {
-			int t[] = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+			int t[] = {1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
 			requirements.insert(requirements.end(), std::begin(t), std::end(t));
 		} else if (benchmark == "x264") {
 			int t[] = {1, 3, 4, 5, 6, 7, 8, 9};
@@ -1069,7 +1070,7 @@ void SchedulerOpen::periodic(SubsecondTime time) {
 			cout << endl;
 		}			
 	}
-	if (time.getNS() % 1000000 == 0) updateMigrationMetrics(time);
+	if (time.getNS() % 2500000 == 0) updateMigrationMetrics(time);
 
 	if ((dvfsPolicy != NULL) && (time.getNS() % dvfsEpoch == 0)) {
 		cout << "\n[Scheduler]: DVFS Control Loop invoked at " << formatTime(time) << endl;
@@ -1201,12 +1202,15 @@ void SchedulerOpen::executeMigrationPolicy(SubsecondTime time) {
 	size_t ogSleepQueueSize = sleepQueue.size();
 	//Now let's try to find free cores for each thread on sleep queue.
 	for (size_t i = 0; i < ogSleepQueueSize; i++){		
+		cout <<"Trying to find candidate for sleep thread "<<sleepQueue.front().assignedThreadID<<endl;
 		core_id_t candidate = INVALID_CORE_ID;
 		for  (int i = 0; i < numberOfTiles; i++){
 			//First find a tile with nonSecure threads on it.
-			if (!tileManager->isSecure(i)) 
+			if (!tileManager->isSecure(i)) {
 				//Then find a free core on that tile
 				candidate = migrationPolicy->getFreeCoreOnTile(i, availableCores);
+				cout<< "Core "<<candidate<<" found on non-secure tile "<< i<<endl;
+				}
 			if (candidate != INVALID_CORE_ID)
 				break;
 		}
@@ -1215,8 +1219,10 @@ void SchedulerOpen::executeMigrationPolicy(SubsecondTime time) {
 			wakeThreadonCore(sleepQueue.front().assignedThreadID, candidate, time);
 		//If no candidates are found (i.e., not enough resources), 
 		else {
+			cout<<"Still no candidate for "<<sleepQueue.front().assignedThreadID<<endl;
 		//Let's get the round robin  thread to put on sleep
 			thread_id_t nextThread = getRoundRobin();
+			cout<< "Next on round robin queue: Thread "<< nextThread<<endl;;
 			if (nextThread== INVALID_THREAD_ID){
 				cout<<"UNEXPECTED ERROR: NO VALID THREAD"<<endl;
 				exit(1);
@@ -1254,6 +1260,9 @@ void SchedulerOpen::executeMigrationPolicy(SubsecondTime time) {
 						cout << "NO valid candidate, applying countermeassure"<<endl;
 						// First find the least busy tile
 						tile_id_t laxTile = migrationPolicy->getTileWLessThreads(currentTile, activeThreadsPerTile);
+						cout<<"Creating isolation on tile "<< laxTile <<endl;
+						if (laxTile == INVALID_TILE_ID)
+							laxTile = currentTile;
 						
 						//Let's find the number of non-secure threads on that tile
 						//UInt32 nonSecureThreadsOnTile = getNonSecureThreadsOnTile(laxTile);
@@ -1262,9 +1271,14 @@ void SchedulerOpen::executeMigrationPolicy(SubsecondTime time) {
 						for (size_t j = 0; j < Sim()->getThreadManager()->getNumThreads() ; j++){
 							Thread * otherThread = Sim()->getThreadManager()->getThreadFromID((thread_id_t)j);
 							// If that thread is non secure and it's on the least busy tile
-							if (otherThread->getTileId() == laxTile && !otherThread->isSecure()) {
+							if (otherThread->getTileId() == laxTile && !otherThread->isSecure() && 
+								Sim()->getThreadManager()->getThreadState(j) ==0) {
+								cout << "Thread "<< j << endl;
 								// If the time shared with this other is greater or equal to max allowed
-								if ((UInt32)otherThread->getSharedSlots() >= migrationPolicy->getMaxSlots()) {
+								//if ((UInt32)otherThread->getSharedSlots() >= migrationPolicy->getMaxSlots() ||
+								//if (tileManager->getMaxSharedTimeOnTile(laxTile) > 0) {	
+									//laxTile == currentTile || migrationPolicy->getFreeCoreOnTile(laxTile, availableCores) == INVALID_CORE_ID) {
+									cout <<"Entrando a migracion o sleep"<<endl;
 									//Get the previous core
 									core_id_t previous = otherThread->getCore()->getId();
 									// Try to find a core on a different tile
@@ -1278,7 +1292,7 @@ void SchedulerOpen::executeMigrationPolicy(SubsecondTime time) {
 									//If no candidates are found (i.e., not enough resources), let's sleep the non-secure thread. 
 									else 
 										sleepThread(j, time);
-								}
+								//}
 							}
 							
 						}
@@ -1289,7 +1303,7 @@ void SchedulerOpen::executeMigrationPolicy(SubsecondTime time) {
 							core_id_t newCandidate = migrationPolicy-> getFreeCoreOnTile(laxTile, availableCores);
 							migrateThread((thread_id_t)i, newCandidate);
 						}
-						migrationPolicy->setCurrentSharedSlots(tileManager->getMaxSharedTimeOnTile(currentTile));
+						migrationPolicy->setCurrentSharedSlots(0);
 						//migrationPolicy->setCurrentPerformance(0);
 							
 						
@@ -1301,6 +1315,7 @@ void SchedulerOpen::executeMigrationPolicy(SubsecondTime time) {
 }
 
 void SchedulerOpen::updateMigrationMetrics(SubsecondTime time){
+	updateAvailableCores();
 	for (size_t i = 0; i < Sim()->getThreadManager()->getNumThreads() ; i++){
 		Thread* currThread = Sim()->getThreadManager()->getThreadFromID((thread_id_t)i);
 		core_id_t currCore;
@@ -1332,9 +1347,9 @@ void SchedulerOpen::updateMigrationMetrics(SubsecondTime time){
 						 // Setting current sharedSlots
 						  UInt32  sharedTime = otherThread->getSharedSlots();
 						  tileManager->setThreadSharedTime(other_thread, sharedTime);
-						  migrationPolicy->setCurrentSharedSlots(tileManager->getMaxSharedTimeOnTile(currTile));
 					   }					
 				}
+				migrationPolicy->setCurrentSharedSlots(tileManager->getMaxSharedTimeOnTile(currTile));
 				//Migration function computation
 				migrationPolicy->computeMigrationFunction();
 				int sharedSlots = migrationPolicy->getCurrentSharedSlots();
@@ -1416,3 +1431,7 @@ UInt32 SchedulerOpen::getAvailableCoresExclTile(tile_id_t tile) {
 // 	}
 // 	return count;	
 // }
+void SchedulerOpen::updateAvailableCores(){
+	for (int i = 0; i < numberOfCores; i++) 
+		availableCores.at(i) = m_core_mask[i] && !isAssignedToTask(i);
+}

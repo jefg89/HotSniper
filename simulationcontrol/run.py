@@ -77,11 +77,11 @@ def run(base_configuration, benchmark, ignore_error=False, save=True):
     started = datetime.datetime.now()
     change_base_configuration(base_configuration)
 
-    periodicPower = 1000000
+    periodicPower = 2500000
     if 'mediumDVFS' in base_configuration:
         periodicPower = 500000
     if 'fastDVFS' in base_configuration:
-        periodicPower = 10000 #100
+        periodicPower = 50000 #100
     args = '-n {number_cores} -c {config} --benchmarks={benchmark} --no-roi --sim-end=last -senergystats:{periodic} -speriodic-power:{periodic}' \
         .format(number_cores=NUMBER_CORES,
                 config=SNIPER_CONFIG,
@@ -136,12 +136,12 @@ class Infeasible(Exception):
 def get_instance(benchmark, parallelism, input_set='small'):
     threads = {
         'parsec-blackscholes': [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-        'parsec-bodytrack': [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-        'parsec-canneal': [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-        'parsec-dedup': [4, 7, 10, 13, 16],
-        'parsec-fluidanimate': [2, 3, 0, 5, 0, 0, 0, 9],
-        'parsec-streamcluster': [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-        'parsec-swaptions': [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+        'parsec-bodytrack': [1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+        'parsec-canneal': [1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+        'parsec-dedup': [1, 7, 10, 13, 16],
+        'parsec-fluidanimate': [1, 3, 0, 5, 0, 0, 0, 9],
+        'parsec-streamcluster': [1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+        'parsec-swaptions': [1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
         'parsec-x264': [1, 3, 4, 5, 6, 7, 8, 9],
         'splash2-barnes': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
         'splash2-cholesky': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
@@ -236,20 +236,24 @@ def example():
 
 
 def test_static_power():
-    run(['4.0GHz', 'testStaticPower', 'slowDVFS'], get_instance('parsec-blackscholes', 3, input_set='simsmall'))
+    run(['4.0GHz', 'testStaticPower', 'slowDVFS'], get_instance('parsec-blackscholes', 1, input_set='simlarge'))
 
 def test_custom_app(appname = 'myapps-my_pi'):# note: the app name should in the format myapps-appname
-    #run(['4.0GHz', 'fastDVFS', 'maxFreq'], '{}-{}-{}'.format(appname, 100000, 1) + ',{}-{}-{}'.format('myapps-noaes', 500000, 1)+ ',{}-{}-{}'.format('myapps-noaes', 500000, 1) + ',{}-{}-{}'.format('myapps-noaes', 500000, 1) + ',{}-{}-{}'.format('myapps-pi', 9000000, 1) + ',{}-{}-{}'.format('myapps-noaes', 500000, 1)  , save=False)
+    run(['4.0GHz', 'fastDVFS', 'maxFreq'], 'parsec-bodytrack-simmedium-2,splash2-ocean.ncont-large-1,parsec-streamcluster-simmedium-2'  , save=False)
     #run(['4.0GHz', 'fastDVFS', 'maxFreq'], '{}-{}-{}'.format(appname, 40000000, 1), save=False)
-    run(['4.0GHz', 'mediumDVFS', 'maxFreq'], '{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format(appname,1000000, 1)  + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) ,save=False)
+    #run(['4.0GHz', 'mediumDVFS', 'maxFreq'], '{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format(appname,1000000, 1)  + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) ,save=False)
     #run(['4.0GHz', 'slowDVFS', 'maxFreq'], '{}-{}-{}'.format(appname, 15000, 2) +',splash2-lu.ncont-large-4', save=False)
 
 def my_parallel_execution():
-    run(['4.0GHz', 'fastDVFS', 'maxFreq'], 'splash2-lu.ncont-large-4,parsec-canneal-simmedium-3,splash2-fmm-large-4')
+    run(['4.0GHz', 'slowDVFS', 'maxFreq'], '{}-{}-{}'.format('myapps-aes', 100000000,1) + ',splash2-lu.ncont-small-1,parsec-canneal-simsmall-2,splash2-fmm-small-1,' + \
+    'splash2-cholesky-small-1,splash2-radiosity-small-1,splash2-fft-small-1,parsec-fluidanimate-small-2,' + \
+    'splash2-radix-small-1,parsec-x264-simsmall-1,splash2-raytrace-small-1,parsec-blackscholes-simsmall-2,parsec-dedup-simsmall-2', save=True) 
+
 
 def main():
-    test_custom_app('myapps-aes')
-    #my_parallel_execution()
+    my_parallel_execution()
+    #test_custom_app('myapps-aes')
+     
 
 if __name__ == '__main__':
     main()

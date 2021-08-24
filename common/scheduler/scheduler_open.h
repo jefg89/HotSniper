@@ -83,6 +83,7 @@ class SchedulerOpen : public SchedulerPinnedBase {
 		vector<bool> availableCores;
 		UInt32 getAvailableCoresExclTile(tile_id_t tile);
 		//UInt32 getNonSecureThreadsOnTile(tile_id_t tile);
+		void updateAvailableCores();
 
 };
 
