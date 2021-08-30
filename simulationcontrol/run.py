@@ -98,6 +98,7 @@ def run(base_configuration, benchmark, ignore_error=False, save=True):
             print(linestr, end='')
     p.wait()
     if (save == True):
+        print("Guardando resultados")
         try:
             cpistack = subprocess.check_output(['python', os.path.join(SNIPER_BASE, 'tools/cpistack.py')], cwd=BENCHMARKS)
         except:
@@ -239,13 +240,13 @@ def test_static_power():
     run(['4.0GHz', 'testStaticPower', 'slowDVFS'], get_instance('parsec-blackscholes', 1, input_set='simlarge'))
 
 def test_custom_app(appname = 'myapps-my_pi'):# note: the app name should in the format myapps-appname
-    run(['4.0GHz', 'fastDVFS', 'maxFreq'], 'parsec-bodytrack-simmedium-2,splash2-ocean.ncont-large-1,parsec-streamcluster-simmedium-2'  , save=False)
-    #run(['4.0GHz', 'fastDVFS', 'maxFreq'], '{}-{}-{}'.format(appname, 40000000, 1), save=False)
+    #run(['4.0GHz', 'fastDVFS', 'maxFreq'], 'parsec-bodytrack-simmedium-2,splash2-ocean.ncont-large-1,parsec-streamcluster-simmedium-2'  , save=true)
+    run(['4.0GHz', 'fastDVFS', 'maxFreq'], '{}-{}-{}'.format(appname, 1000, 1)+ ',{}-{}-{}'.format(appname, 10000, 1), save=True)
     #run(['4.0GHz', 'mediumDVFS', 'maxFreq'], '{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format(appname,1000000, 1)  + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) ,save=False)
-    #run(['4.0GHz', 'slowDVFS', 'maxFreq'], '{}-{}-{}'.format(appname, 15000, 2) +',splash2-lu.ncont-large-4', save=False)
+    #run(['4.0GHz', 'slowDVFS', 'maxFreq'], 'parsec-x264-simsmall-1', save=True)
 
 def my_parallel_execution():
-    run(['4.0GHz', 'slowDVFS', 'maxFreq'], '{}-{}-{}'.format('myapps-aes', 100000000,1) + ',splash2-lu.ncont-small-1,parsec-canneal-simsmall-2,splash2-fmm-small-1,' + \
+    run(['4.0GHz', 'slowDVFS', 'maxFreq'], '{}-{}-{}'.format('myapps-aes', 5000000,1) + ',splash2-lu.ncont-small-1,parsec-canneal-simsmall-2,splash2-fmm-small-1,' + \
     'splash2-cholesky-small-1,splash2-radiosity-small-1,splash2-fft-small-1,parsec-fluidanimate-small-2,' + \
     'splash2-radix-small-1,parsec-x264-simsmall-1,splash2-raytrace-small-1,parsec-blackscholes-simsmall-2,parsec-dedup-simsmall-2', save=True) 
 

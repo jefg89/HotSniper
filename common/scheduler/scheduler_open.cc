@@ -62,7 +62,9 @@ struct openTask {
 	int taskCoreRequirement = coreRequirementTranslation(taskName);
 	UInt64 taskArrivalTime;
 	UInt64 taskStartTime;
-	UInt64 taskDepartureTime; 	
+	UInt64 taskDepartureTime; 
+	UInt64 migrations = 0;
+	UInt64 sleep = 0;	
 
 };
 
@@ -164,7 +166,31 @@ SchedulerOpen::SchedulerOpen(ThreadManager *thread_manager)
 			UInt64 time = Sim()->getCfg()->getIntArray("scheduler/open/explicitArrivalTimes", taskIterator);
 			cout << "[Scheduler]: Setting Arrival Time for Task " << taskIterator << " (" + openTasks[taskIterator].taskName + ")" << " to " << time << +" ns" << endl;
 			openTasks[taskIterator].taskArrivalTime = time;
-		}
+			}
+		} else if (distribution == "uniform_random") {
+			// calculate Poisson-distributed arrival rates for the task.
+			// The expected time between arrivales is the configured value "arrivalInterval".
+			// The generation can either use a user-defined seed or generate a new seed for every execution.
+			int seed = Sim()->getCfg()->getInt("scheduler/open/distributionSeed");
+			if (seed == 0) {
+				// Set a "truely random" seed
+				std::random_device rd;
+				seed = rd();
+			}
+			std::mt19937 generator(seed);
+			generator(); // read one dummy value (first value was very like the seed: small seed -> small first arrival time, big seed -> big first arrival time. We do not want to have this.)
+			
+			std::uniform_int_distribution<UInt64>  uniform_distribution(0, arrivalInterval);
+
+			UInt64 time = 0;
+			for (int taskIterator = 0; taskIterator < numberOfTasks; taskIterator++) {
+				if (taskIterator % arrivalRate == 0 && taskIterator != 0) {
+					time = (UInt64)uniform_distribution(generator);
+				}
+				cout << "[Scheduler]: Setting Arrival Time for Task " << taskIterator << " (" + openTasks[taskIterator].taskName + ")" << " to " << time << +" ns" << endl;
+				openTasks[taskIterator].taskArrivalTime = time;
+			}
+				
 	} else if (distribution == "poisson") {
 		// calculate Poisson-distributed arrival rates for the task.
 		// The expected time between arrivales is the configured value "arrivalInterval".
@@ -482,6 +508,9 @@ void SchedulerOpen::migrateThread(thread_id_t thread_id, core_id_t core_id)
 			cout << "[Scheduler] [Error] core is already in use" << endl;
 			exit(1);
 		}
+
+		app_id_t  app_id = systemCores[from_core_id].assignedTaskID; 
+		openTasks[app_id].migrations++;
 		
 		
 		cpu_set_t my_set; 
@@ -716,6 +745,8 @@ void SchedulerOpen::threadExit(thread_id_t thread_id, SubsecondTime time) {
 		openTasks[app_id].active = false;
 
 		cout << "\n[Scheduler][Result]: Task " << app_id << " (Response/Service/Wait) Time (ns) "  << " :\t" <<  time.getNS() - openTasks[app_id].taskArrivalTime << "\t" <<  time.getNS() - openTasks[app_id].taskStartTime << "\t" << openTasks[app_id].taskStartTime - openTasks[app_id].taskArrivalTime << "\n";
+		cout << "\n[Scheduler][Result]: Task " << app_id << " Migrations  "<< " :\t"<< openTasks[app_id].migrations<<endl;
+		cout << "\n[Scheduler][Result]: Task " << app_id << " Sleeps  "<< " :\t"<< openTasks[app_id].sleep<<endl;
 	}
 
 	if (numberOfFreeCores () == numberOfCores && numberOfTasksWaitingToSchedule () != 0) {
@@ -1020,7 +1051,7 @@ void SchedulerOpen::periodic(SubsecondTime time) {
 	}
 
 
-	if (time.getNS () % 1000000 == 0) { //Error Checking at every 1ms. Can be faster but will have overhead in simulation time.
+	if (time.getNS () % 5000000 == 0) { //Error Checking at every 1ms. Can be faster but will have overhead in simulation time.
 		cout << "\n[Scheduler]: Time " << formatTime(time) << " [Active Tasks =  " << numberOfActiveTasks () << " | Completed Tasks = " <<  numberOfTasksCompleted () << " | Queued Tasks = "  << numberOfTasksInQueue () << " | Non-Queued Tasks  = " <<  numberOfTasksWaitingToSchedule () <<  " | Free Cores = " << numberOfFreeCores () << " | Active Tasks Requirements = " << totalCoreRequirementsOfActiveTasks () << " ] \n" << endl;		
 		//Following error checking code makes sure that the system state is not messed up.
 
@@ -1377,6 +1408,9 @@ void SchedulerOpen::sleepThread(thread_id_t thread_id, SubsecondTime time){
 	if (Sim()->getThreadManager()->getThreadFromID(thread_id)->isSecure()) {
 			tileManager->unsetSecure(core_id);
 	}
+	app_id_t  app_id = systemCores[core_id].assignedTaskID; 
+	openTasks[app_id].sleep++;
+
 	systemCores[core_id].assignedTaskID = -1;
 	systemCores[core_id].assignedThreadID = -1;
 	systemCores[core_id].coreID = -1;
