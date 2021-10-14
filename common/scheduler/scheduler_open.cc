@@ -18,6 +18,7 @@
 #include "policies/dvfsTestStaticPower.h"
 #include "policies/mapFirstUnused.h"
 #include "policies/mapOnTile.h"
+#include "policies/mapSecureAlone.h"
 #include "policies/migNextTile.h"
 #include "policies/migRandom.h"
 #include "policies/migFreeTile.h"
@@ -243,6 +244,17 @@ void SchedulerOpen::initMappingPolicy(String policyName) {
 			preferredTiles.push_back(preferredTile);
 		}
 		mappingPolicy = new MapOnTile(numberOfTasks, coreRows, coreColumns, preferredTiles);
+	
+	}
+
+	else 
+	if (policyName == "secure_alone"){
+		vector<int> preferredTiles;
+		for (int taskIterator = 0; taskIterator < numberOfTasks; taskIterator++) {
+			int preferredTile = Sim()->getCfg()->getIntArray("scheduler/open/preferred_tiles", taskIterator);
+			preferredTiles.push_back(preferredTile);
+		}
+		mappingPolicy = new MapSecureAlone(numberOfTasks, coreRows, coreColumns, preferredTiles);
 	
 	}
 	
