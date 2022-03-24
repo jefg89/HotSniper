@@ -16,7 +16,7 @@ using namespace std;
 std::random_device rd;  
 std::mt19937 gen(rd());
 std::vector<bool> attestation_flags = {false, false, false};
-__int128_t hash_seed;
+__uint128_t hash_seed;
 
 
 
@@ -28,13 +28,13 @@ void FIRFilter(uint16_t * input, float * output);
 //bool simCheckAttestation();
 //bool SimCheckAttestationTurn();
 //uint16_t SimGetChallengeId();
-//__int128_t simGetChallengeSeed();
+//__uint128_t simGetChallengeSeed();
 void computeChallenge(uint16_t challenge);
-void simSendChallengeResult(__int128_t result);
+void simSendChallengeResult(__uint128_t result);
 void enableHashComputation(uint16_t flag);
 void disableAllFlags(); 
 
-void debugPrintHash(const char * module,__int128_t hash);
+void debugPrintHash(const char * module,__uint128_t hash);
 
 __attribute__ ((__noinline__))
 void * getPC () { return __builtin_return_address(0); }
@@ -79,7 +79,7 @@ int mainLoop(int iter) {
             cout<< "Got challenge "<< challenge << endl;
             // Compute Challenge
             computeChallenge(challenge);
-            // Send the answer back to the Verifier (simulator).
+      
         }
         // END of ADDED CODE
 
@@ -97,7 +97,10 @@ int mainLoop(int iter) {
             // send(encrypted, time);
 
         if (attestation & myTurn) {
-            simSendChallengeResult(hash_seed); //need id?
+            // Send the answer back to the Verifier (simulator).
+            uint64_t hash_msw = (hash_seed >> 64);
+            uint64_t hash_lsw = ((hash_seed << 64) >> 64);
+            SimSendChallengeResult(hash_msw, hash_lsw); //need id?
             myTurn = false;
             attestation = false;
             disableAllFlags();
@@ -122,9 +125,9 @@ void readADC(uint16_t * input) {
 
     if (attestation_flags.at(0)) {
         cout << "readADC under attestation " << endl;
-        __int128_t diff_addr = init_pc_addr -  reinterpret_cast<__int128_t>(getPC()); // Get Current PC
+        __uint128_t diff_addr = init_pc_addr -  reinterpret_cast<__uint128_t>(getPC()); // Get Current PC
         // Now let's build a hash relative to the PC difference (should remain constant)
-        __int128_t hash_module  = diff_addr << 64 | (diff_addr << 120) >> 120;
+        __uint128_t hash_module  = diff_addr << 64 | (diff_addr << 120) >> 120;
         // Keep the hash chain
         hash_seed = hash_seed ^ hash_module;
         debugPrintHash("ADC", hash_seed);
@@ -154,9 +157,9 @@ void FIRFilter(uint16_t * input, float * output) {
     }
     if (attestation_flags.at(1)) {
         cout << "FIRFilter under attestation " << endl;
-        __uint128_t diff_addr = init_pc_addr -  reinterpret_cast<__int128_t>(getPC()); // Get Current PC
+        __uint128_t diff_addr = init_pc_addr -  reinterpret_cast<__uint128_t>(getPC()); // Get Current PC
         // Now let's build a hash relative to the PC difference (should remain constant)
-        __int128_t hash_module  = diff_addr<<116 | diff_addr>>12;
+        __uint128_t hash_module  = diff_addr<<116 | diff_addr>>12;
         // Keep the hash chain
         hash_seed = hash_seed ^ hash_module;
         debugPrintHash("FIR", hash_seed);
@@ -225,20 +228,20 @@ void disableAllFlags(){
 //     std::uniform_int_distribution<> uchar(0, 2);
 //     return uchar(gen);
 // }
-// __int128_t simGetChallengeSeed(){
+// __uint128_t simGetChallengeSeed(){
 //     cout<< "Get Challenge Seed Called "<< endl;
 //     std::uniform_int_distribution<> distrib;
-//     __int128_t out = (static_cast<__int128_t>(distrib(gen)) << 96) | (static_cast<__int128_t>(distrib(gen)) << 64) |
-//                      (static_cast<__int128_t>(distrib(gen)) << 32) | (static_cast<__int128_t>(distrib(gen)));
+//     __uint128_t out = (static_cast<__uint128_t>(distrib(gen)) << 96) | (static_cast<__uint128_t>(distrib(gen)) << 64) |
+//                      (static_cast<__uint128_t>(distrib(gen)) << 32) | (static_cast<__uint128_t>(distrib(gen)));
 //     return out;
 // }
-void simSendChallengeResult(__int128_t result) {
+void simSendChallengeResult(__uint128_t result) {
     cout <<"Send Challenge Called" <<endl;
     debugPrintHash("SIM", result);
 }
 
 
-void debugPrintHash(const char * module, __int128_t hash) {
+void debugPrintHash(const char * module, __uint128_t hash) {
     if (DEBUG) {
         long int MSB = hash >> 64;
         long int LSB = ((hash << 64) >> 64);

@@ -76,7 +76,7 @@ tile_id_t MigSecure::getTileWLessThreads(tile_id_t secureThreadTile, std::vector
         if (activeThreadsPerTile.at(i) < min)
             minIdx = i;
     
-    if ((activeThreadsPerTile.at(secureThreadTile) == minIdx) || 
+    if (((int)activeThreadsPerTile.at(secureThreadTile) == minIdx) || 
         (activeThreadsPerTile.at(secureThreadTile) == activeThreadsPerTile.at(minIdx) + 1 )) 
             minIdx = secureThreadTile;
 

@@ -65,15 +65,20 @@ UInt64 handleMagicInstruction(thread_id_t thread_id, UInt64 cmd, UInt64 arg0, UI
    }
    case SIM_CMD_CHALLENGE_ID:
    {
-      return Sim()->getAttestationManager()->getChallengeID();
+      return Sim()->getAttestationManager()->getChallengeId(thread_id);
    }
    case SIM_CMD_CHALLENGE_HASH_LSW:
    {
-      return Sim()->getAttestationManager()->getChallengeHash();
+      return Sim()->getAttestationManager()->getChallengeHash(thread_id);
    }
       case SIM_CMD_CHALLENGE_HASH_MSW:
    {
-      return Sim()->getAttestationManager()->getChallengeHash();
+      return Sim()->getAttestationManager()->getChallengeHash(thread_id);
+   }
+   case SIM_CMD_CHALLENGE_RESULT:
+   {
+      UInt128 result = (static_cast<UInt128>(arg0) << 64) | (static_cast<UInt128>(arg1));
+      return Sim()->getAttestationManager()->checkChallengeResult(thread_id, result);
    }
    default:
       LOG_PRINT_WARNING_ONCE("Encountered unknown magic instruction cmd(%u)", cmd);

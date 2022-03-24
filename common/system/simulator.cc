@@ -123,9 +123,9 @@ Simulator::Simulator()
    , m_faultinjection_manager(NULL)
    , m_rtn_tracer(NULL)
    , m_memory_tracker(NULL)
+   , m_attestation_manager(NULL)
    , m_running(false)
    , m_inst_mode_output(true)
-   , m_attestation_manager(NULL)
 {
 }
 
