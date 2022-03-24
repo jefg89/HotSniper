@@ -970,7 +970,7 @@ void SchedulerOpen::threadExit(thread_id_t thread_id, SubsecondTime time) {
 		}
 
 
-		cout << "\n[Scheduler][Result]: Average Response Time (ns) " << " :\t" <<  averageResponseTime/numberOfTasks << "\n\n";
+		cout << "\n[Scheduler][Result]: Average Response Time (ns) " << " :\t" << std::dec<< averageResponseTime/numberOfTasks << "\n\n";
 
 	}
 
