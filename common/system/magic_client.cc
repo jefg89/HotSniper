@@ -50,7 +50,6 @@ UInt64 handleMagicInstruction(thread_id_t thread_id, UInt64 cmd, UInt64 arg0, UI
       return 0;
    case SIM_CMD_SET_SECURE: 
    {
-      Sim()->getThreadManager()->getThreadFromID(thread_id)->setSecure();
       return 0;
    }
    case SIM_CMD_CHECK_ATTESTATION: 
