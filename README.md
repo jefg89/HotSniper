@@ -1,8 +1,12 @@
+### Next Release: CoMeT Simulator
+
+CoMeT: CoMeT is next-generation open-source EDA toolchain for integrated core-memory interval thermal simulations of 2D, 2.5, and 3D multi-/many-core processors. CoMeT *subsumes* the code of HotSniper.
+
+[Download CoMeT](https://github.com/marg-tools/CoMeT) 
+
 # HotSniper 7
 
 An EDA toolchain for interval thermal simulations of 2D multi-/many-cores in an open system.
--   Creators: Martin Rapp, Anuj Pathania, Mohammed Bakr Sikal, Jörg Henkel
--   License: MIT
 
 Note: If you have a problem, please first browse the closed issues here - https://github.com/anujpathania/HotSniper/issues. If your problem continues to remain unresolved, please feel free to contact us by raising a new issue. Also, please do not forget to close the issue once we have addressed your problem. We prefer not to resolve issues over e-mail.
 
@@ -16,6 +20,10 @@ Details of HotSniper can be found in our ESL 2018 paper, and please consider cit
 
 [IEEE Xplore](https://ieeexplore.ieee.org/abstract/document/8444047) 
 
+## The HotSniper User Manual
+
+Please refer to [Hot Sniper User Manual](https://github.com/anujpathania/HotSniper/blob/master/The%20HotSniper%20User%20Manual.pdf) to learn how to write custom scheduling policies that perform thermal-aware Dynamic Voltage Frequency Scaling (DVFS), Task Mapping, and Task Migration.
+
 
 ## 1- Requirements
 ### Docker
@@ -24,9 +32,9 @@ For more info: https://www.docker.com/
 ### PinPlay 
 Download and extract Pinplay 3.2 to the root HotSniper7 directory as ```pin_kit```
 ```sh
-wget https://software.intel.com/content/dam/develop/external/us/en/protected/pinplay-drdebug-3.2-pin-3.2-81205-gcc-linux.tar.gz
-tar xf pinplay-drdebug-3.2-pin-3.2-81205-gcc-linux.tar.gz
-mv pinplay-drdebug-3.2-pin-3.2-81205-gcc-linux pin_kit
+wget https://software.intel.com/sites/landingpage/pintool/downloads/pin-3.20-98437-gf02b61307-gcc-linux.tar.gz
+tar xf pin-3.20-98437-gf02b61307-gcc-linux.tar.gz
+mv pin-3.20-98437-gf02b61307-gcc-linux pin_kit
 ```
 
 ## 2- Compiling HotSniper7
@@ -156,3 +164,4 @@ export PYTHONIOENCODING="UTF-8"
   MatEx: http://ces.itec.kit.edu/846.php
   
   thermallib: https://github.com/ma-rapp/thermallib
+

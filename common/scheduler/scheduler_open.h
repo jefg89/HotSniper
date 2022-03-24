@@ -12,21 +12,21 @@
 #include "performance_counters.h"
 #include "policies/dvfspolicy.h"
 #include "policies/mappingpolicy.h"
-#include "policies/migrationPolicy.h"
-#include "tile_manager.h"
+#include "policies/migrationpolicy.h"
 
 
 class SchedulerOpen : public SchedulerPinnedBase {
 
 	public:
 		SchedulerOpen (ThreadManager *thread_manager); //This function is the constructor for Open System Scheduler.
-		virtual ~SchedulerOpen() {migfile.close();}
 		virtual void periodic(SubsecondTime time);
 		virtual void threadSetInitialAffinity(thread_id_t thread_id);
 		virtual bool threadSetAffinity(thread_id_t calling_thread_id, thread_id_t thread_id, size_t cpusetsize, const cpu_set_t *mask);
 		virtual core_id_t threadCreate(thread_id_t thread_id);
 		virtual void threadExit(thread_id_t thread_id, SubsecondTime time);
-		TileManager * tileManager;
+
+		
+
 	private:
 		int coreRows;
 		int coreColumns;
@@ -56,6 +56,10 @@ class SchedulerOpen : public SchedulerPinnedBase {
 		int maxFrequency;
 		int frequencyStepSize;
 
+		MigrationPolicy *migrationPolicy = NULL;
+		long migrationEpoch;
+		void initMigrationPolicy(String policyName);
+		void executeMigrationPolicy(SubsecondTime time);
 		void migrateThread(thread_id_t thread_id, core_id_t core_id);
 
 		std::string formatTime(SubsecondTime time);
@@ -70,21 +74,6 @@ class SchedulerOpen : public SchedulerPinnedBase {
 		int setAffinity (thread_id_t thread_id);
 		bool schedule (int taskID, bool isInitialCall, SubsecondTime time);
 		
-		void initMigrationPolicy(String policyName);
-		MigrationPolicy * migrationPolicy;
-		void executeMigrationPolicy(SubsecondTime time);
-		void updateMigrationMetrics(SubsecondTime time);
-		double m_prev_ipc;
-
-		ofstream migfile;
-		ofstream otherfile;
-		void sleepThread(thread_id_t thread_id, SubsecondTime time);
-		void wakeThreadonCore(thread_id_t thread_id, core_id_t core_id, SubsecondTime time);
-		vector<bool> availableCores;
-		UInt32 getAvailableCoresExclTile(tile_id_t tile);
-		//UInt32 getNonSecureThreadsOnTile(tile_id_t tile);
-		void updateAvailableCores();
-
 };
 
 #endif // __SCHEDULER_OPEN_H

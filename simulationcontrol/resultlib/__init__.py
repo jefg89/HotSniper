@@ -12,6 +12,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 RESULT_DIRS = [RESULTS_FOLDER]
 NAME_REGEX = r'results_(\d+-\d+-\d+_\d+.\d+)_([a-zA-Z0-9_\.\+]+)_((splash2|parsec|myapps)-.*)'
 
+print(NAME_REGEX)
 
 cache = diskcache.Cache(directory=os.path.join(HERE, 'cache'))
 
@@ -47,7 +48,6 @@ def _open_file(run, filename):
 def get_date(run):
     m = re.search(NAME_REGEX, run)
     return m.group(1)
-
 
 def get_config(run):
     m = re.search(NAME_REGEX, run)
@@ -101,41 +101,6 @@ def get_individual_response_times(run):
     else:
         return [resp_times[task] for task in keys]
 
-@cache.memoize()
-def get_individual_migrations(run):
-    migrations = {}
-    with _open_file(run, 'execution.log') as f:
-        for line in f:
-            m = re.search(r'Task (\d+) Migrations\s+:\s+(\d+)', line)
-            if m is not None:
-                task = int(m.group(1))
-                mig = int(m.group(2))
-                migrations[task] = mig
-    keys = sorted(migrations.keys())
-    if len(keys) == 0:
-        return '-'
-    elif keys != list(range(max(keys)+1)):
-        raise Exception('task(s) missing: {}'.format(', '.join(map(str, sorted(list(set(range(max(keys)+1)) - set(keys)))))))
-    else:
-        return [migrations[task] for task in keys]
-
-@cache.memoize()
-def get_individual_sleep(run):
-    sleeps = {}
-    with _open_file(run, 'execution.log') as f:
-        for line in f:
-            m = re.search(r'Task (\d+) Sleeps\s+:\s+(\d+)', line)
-            if m is not None:
-                task = int(m.group(1))
-                slp = int(m.group(2))
-                sleeps[task] = slp
-    keys = sorted(sleeps.keys())
-    if len(keys) == 0:
-        return '-'
-    elif keys != list(range(max(keys)+1)):
-        raise Exception('task(s) missing: {}'.format(', '.join(map(str, sorted(list(set(range(max(keys)+1)) - set(keys)))))))
-    else:
-        return [sleeps[task] for task in keys]
 
 @cache.memoize()
 def get_individual_start_times(run):

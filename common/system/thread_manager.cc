@@ -15,11 +15,8 @@
 #include "syscall_server.h"
 #include "circular_log.h"
 
-#include<iostream>
 #include <sys/syscall.h>
 #include "os_compat.h"
-
-using namespace std;
 
 const char* ThreadManager::stall_type_names[] = {
    "unscheduled", "broken", "join", "mutex", "cond", "barrier", "futex", "pause", "sleep", "syscall"
@@ -341,19 +338,13 @@ void ThreadManager::wakeUpWaiter(thread_id_t thread_id, SubsecondTime time)
 
 void ThreadManager::stallThread_async(thread_id_t thread_id, stall_type_t reason, SubsecondTime time)
 {
-  if (reason == STALL_SLEEP)
-      cout<<"Got in! "<<time.getUS() <<endl;
    LOG_PRINT("Core(%i) -> STALLED", thread_id);
    m_thread_state[thread_id].status = Core::STALLED;
    m_thread_state[thread_id].stalled_reason = reason;
 
    HooksManager::ThreadStall args = { thread_id: thread_id, reason: reason, time: time };
-   if (reason == STALL_SLEEP)
-      cout <<"Esta call es ok"<<endl;
    Sim()->getHooksManager()->callHooks(HookType::HOOK_THREAD_STALL, (UInt64)&args);
    CLOG("thread", "Stall %d (%s)", thread_id, ThreadManager::stall_type_names[reason]);
-   if (reason == STALL_SLEEP)
-      cout <<"Salimos, no es aca wey"<<endl;
 }
 
 SubsecondTime ThreadManager::stallThread(thread_id_t thread_id, stall_type_t reason, SubsecondTime time)
