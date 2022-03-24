@@ -18,10 +18,16 @@
 #define SIM_CMD_NAMED_MARKER    13
 #define SIM_CMD_SET_THREAD_NAME 14
 #define SIM_CMD_SET_SECURE      15
+#define SIM_CMD_CHECK_ATTESTATION 16
+#define SIM_CMD_ATTESTATION_TURN  17
+#define SIM_CMD_CHALLENGE_ID      18
+#define SIM_CMD_CHALLENGE_HASH_LSW    19
+#define SIM_CMD_CHALLENGE_HASH_MSW    20
 
 #define SIM_OPT_INSTRUMENT_DETAILED    0
 #define SIM_OPT_INSTRUMENT_WARMUP      1
 #define SIM_OPT_INSTRUMENT_FASTFORWARD 2
+
 
 #if defined(ARM_64)
 
@@ -133,5 +139,10 @@
 #define SimUser(cmd, arg)         SimMagic2(SIM_CMD_USER, cmd, arg)
 #define SimSetInstrumentMode(opt) SimMagic1(SIM_CMD_INSTRUMENT_MODE, opt)
 #define SimInSimulator()          (SimMagic0(SIM_CMD_IN_SIMULATOR)!=SIM_CMD_IN_SIMULATOR)
+#define SimCheckAttestation()     SimMagic0(SIM_CMD_CHECK_ATTESTATION)
+#define SimCheckAttestationTurn() SimMagic0(SIM_CMD_ATTESTATION_TURN)
+#define SimGetChallengeId()       SimMagic0(SIM_CMD_CHALLENGE_ID)
+#define SimGetChallengeHashLSW()     SimMagic0(SIM_CMD_CHALLENGE_HASH_LSW)
+#define SimGetChallengeHashMSW()     SimMagic0(SIM_CMD_CHALLENGE_HASH_MSW)
 
 #endif /* __SIM_API */

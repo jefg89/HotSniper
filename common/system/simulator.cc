@@ -27,6 +27,7 @@
 #include "instruction_tracer.h"
 #include "memory_tracker.h"
 #include "circular_log.h"
+#include "attestation_manager.h"
 
 #include <sstream>
 
@@ -124,6 +125,7 @@ Simulator::Simulator()
    , m_memory_tracker(NULL)
    , m_running(false)
    , m_inst_mode_output(true)
+   , m_attestation_manager(NULL)
 {
 }
 
@@ -150,6 +152,7 @@ void Simulator::start()
    m_fastforward_performance_manager = FastForwardPerformanceManager::create();
    m_rtn_tracer = RoutineTracer::create();
    m_thread_manager = new ThreadManager();
+   m_attestation_manager = new AttestationManager();
 
    if (Sim()->getCfg()->getBool("traceinput/enabled"))
       m_trace_manager = new TraceManager();

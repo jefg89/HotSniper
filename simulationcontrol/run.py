@@ -241,7 +241,7 @@ def test_static_power():
 
 def test_custom_app(appname = 'myapps-my_pi'):# note: the app name should in the format myapps-appname
     #run(['4.0GHz', 'fastDVFS', 'maxFreq'], 'parsec-bodytrack-simmedium-2,splash2-ocean.ncont-large-1,parsec-streamcluster-simmedium-2'  , save=true)
-    run(['4.0GHz', 'fastDVFS', 'maxFreq'], '{}-{}-{}'.format(appname, 1000, 1), save=True)
+    run(['4.0GHz', 'fastDVFS', 'maxFreq'], '{}-{}-{}'.format(appname, 2, 1), save=True)
     #run(['4.0GHz', 'mediumDVFS', 'maxFreq'], '{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format(appname,1000000, 1)  + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) ,save=False)
     #run(['4.0GHz', 'slowDVFS', 'maxFreq'], 'parsec-x264-simsmall-1', save=True)
 
@@ -252,8 +252,8 @@ def my_parallel_execution():
 
 
 def main():
-    my_parallel_execution()
-    #test_custom_app('myapps-aes')
+    #my_parallel_execution()
+    test_custom_app('myapps-attestation')
      
 
 if __name__ == '__main__':

@@ -29,6 +29,7 @@ class FaultinjectionManager;
 class TagsManager;
 class RoutineTracer;
 class MemoryTracker;
+class AttestationManager;
 namespace config { class Config; }
 
 class Simulator
@@ -71,6 +72,7 @@ public:
    RoutineTracer *getRoutineTracer() { return m_rtn_tracer; }
    MemoryTracker *getMemoryTracker() { return m_memory_tracker; }
    void setMemoryTracker(MemoryTracker *memory_tracker) { m_memory_tracker = memory_tracker; }
+   AttestationManager * getAttestationManager() {return m_attestation_manager; }
 
    bool isRunning() { return m_running; }
    static void enablePerformanceModels();
@@ -106,6 +108,7 @@ private:
    FaultinjectionManager *m_faultinjection_manager;
    RoutineTracer *m_rtn_tracer;
    MemoryTracker *m_memory_tracker;
+   AttestationManager * m_attestation_manager;
 
    bool m_running;
    bool m_inst_mode_output;

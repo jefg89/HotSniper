@@ -6,6 +6,7 @@
 #include "core_manager.h"
 #include "thread.h"
 #include "thread_manager.h"
+#include "attestation_manager.h"
 
 static UInt64 handleMagic(thread_id_t thread_id, UInt64 cmd, UInt64 arg0 = 0, UInt64 arg1 = 0)
 {
@@ -51,6 +52,28 @@ UInt64 handleMagicInstruction(thread_id_t thread_id, UInt64 cmd, UInt64 arg0, UI
    {
       Sim()->getThreadManager()->getThreadFromID(thread_id)->setSecure();
       return 0;
+   }
+   case SIM_CMD_CHECK_ATTESTATION: 
+   {
+      LOG_PRINT_WARNING("Check attestation not implemented yet, returning true by default");
+      return  Sim()->getThreadManager()->getThreadFromID(thread_id)->isUnderAttestation();
+   }
+   case SIM_CMD_ATTESTATION_TURN:
+   {
+      LOG_PRINT_WARNING("Check attestation turn not implemented yet, returning true by default");
+      return  Sim()->getThreadManager()->getThreadFromID(thread_id)->isnextForAttestation();
+   }
+   case SIM_CMD_CHALLENGE_ID:
+   {
+      return Sim()->getAttestationManager()->getChallengeID();
+   }
+   case SIM_CMD_CHALLENGE_HASH_LSW:
+   {
+      return Sim()->getAttestationManager()->getChallengeHash();
+   }
+      case SIM_CMD_CHALLENGE_HASH_MSW:
+   {
+      return Sim()->getAttestationManager()->getChallengeHash();
    }
    default:
       LOG_PRINT_WARNING_ONCE("Encountered unknown magic instruction cmd(%u)", cmd);

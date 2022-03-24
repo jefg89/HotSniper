@@ -33,6 +33,9 @@ class Thread
       UInt64 m_va2pa_arg;
       UInt32 m_shared_slots;
       double m_periodic_performance;
+      bool m_under_attestation = true;
+      bool m_next_for_attestation = true;
+     
       void setTile();
       
 
@@ -54,6 +57,13 @@ class Thread
       void setName(String name) { m_name = name; }
       void setSecure() {m_secure = true; }
       bool isSecure() const { return m_secure; }
+
+      void setUnderAttestation() {m_under_attestation = true; }
+      bool isUnderAttestation() const {return m_under_attestation;}
+     
+      void setNextForAttestation(){ m_next_for_attestation = true; }
+      bool isnextForAttestation() const {return m_next_for_attestation; }
+
       SyncClient *getSyncClient() const { return m_sync_client; }
       RoutineTracerThread* getRoutineTracer() const { return m_rtn_tracer; }
 

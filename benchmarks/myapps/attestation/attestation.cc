@@ -25,10 +25,10 @@ void readADC(uint16_t * input);
 void FIRFilter(uint16_t * input, float * output);
 
 
-bool simCheckAttestation();
-bool simCheckAttestationTurn();
-uint16_t simGetChallengeId();
-__int128_t simGetChallengeSeed();
+//bool simCheckAttestation();
+//bool SimCheckAttestationTurn();
+//uint16_t SimGetChallengeId();
+//__int128_t simGetChallengeSeed();
 void computeChallenge(uint16_t challenge);
 void simSendChallengeResult(__int128_t result);
 void enableHashComputation(uint16_t flag);
@@ -37,12 +37,12 @@ void disableAllFlags();
 void debugPrintHash(const char * module,__int128_t hash);
 
 __attribute__ ((__noinline__))
-void * get_pc () { return __builtin_return_address(0); }
+void * getPC () { return __builtin_return_address(0); }
 
 
 // Initialization method
 // Entry point for the program
-void main_setup() {
+void mainSetup() {
     // initDev();
     // initADC();
     // setInts();
@@ -50,8 +50,8 @@ void main_setup() {
     cout << "Entering setup" << endl;
 }
 
-int main_loop() {
-    int iter = 5;
+int mainLoop(int iter) {
+    SimRoiStart();
     cout <<"Entering main loop for " <<iter << " iterations" <<endl;
     // float filtered;
     // float encrypted;
@@ -62,17 +62,19 @@ int main_loop() {
         // ADDED CODE HERE
         // Polls for attestation request by Verifier (simulator).
         // This has the same return value for all applications (true/false) -> simultaneous attestation
-        bool attestation = simCheckAttestation();
+        bool attestation = SimCheckAttestation();
         bool myTurn = false;
         if (attestation) {
-            cout << "Starting statestation" <<endl;
+            cout << "Starting atatestation" <<endl;
             while (!myTurn) 
                 // Wait until it's my turn on the queue
-                myTurn = simCheckAttestationTurn(); //need id?
+                myTurn = SimCheckAttestationTurn(); //need id?
             cout << "It's my turn" <<endl;
             // If it's my turn, get the challenge
-            uint16_t challenge = simGetChallengeId(); //need id?
-            hash_seed = simGetChallengeSeed();
+            uint16_t challenge = SimGetChallengeId(); //need id?
+            // Now get the challenge's hash
+            hash_seed = SimGetChallengeHashMSW(); // Most Significant Word
+            hash_seed = hash_seed << 64 | SimGetChallengeHashLSW(); //Least Significant Word
             debugPrintHash("MAIN", hash_seed);
             cout<< "Got challenge "<< challenge << endl;
             // Compute Challenge
@@ -100,6 +102,7 @@ int main_loop() {
             attestation = false;
             disableAllFlags();
         }
+        SimRoiEnd();
     }
     return 1;
 } 
@@ -110,7 +113,7 @@ int main_loop() {
 void readADC(uint16_t * input) {
     int64_t init_pc_addr;  
     if (attestation_flags.at(0))
-        init_pc_addr =  reinterpret_cast<int64_t>(get_pc()); // Get initial PC
+        init_pc_addr =  reinterpret_cast<int64_t>(getPC()); // Get initial PC
     
     std::uniform_int_distribution<> ushort(0, 511);
     //Get N Samples
@@ -119,7 +122,7 @@ void readADC(uint16_t * input) {
 
     if (attestation_flags.at(0)) {
         cout << "readADC under attestation " << endl;
-        __int128_t diff_addr = init_pc_addr -  reinterpret_cast<__int128_t>(get_pc()); // Get Current PC
+        __int128_t diff_addr = init_pc_addr -  reinterpret_cast<__int128_t>(getPC()); // Get Current PC
         // Now let's build a hash relative to the PC difference (should remain constant)
         __int128_t hash_module  = diff_addr << 64 | (diff_addr << 120) >> 120;
         // Keep the hash chain
@@ -133,7 +136,7 @@ void readADC(uint16_t * input) {
 void FIRFilter(uint16_t * input, float * output) {
     int64_t init_pc_addr;
      if (attestation_flags.at(1))
-        init_pc_addr =  reinterpret_cast<int64_t>(get_pc()); // Get initial PC  
+        init_pc_addr =  reinterpret_cast<int64_t>(getPC()); // Get initial PC  
     float delayLine [9] = {0,0,0,0,0,0,0,0,0}; 
     float filterTaps [9] = {0.01156111,0.05773286,0.12773940,0.19304879,0.21983567,0.19304879,0.12773940,0.05773286,0.01156111}; 
     float filtered;
@@ -151,11 +154,10 @@ void FIRFilter(uint16_t * input, float * output) {
     }
     if (attestation_flags.at(1)) {
         cout << "FIRFilter under attestation " << endl;
-        __uint128_t diff_addr = init_pc_addr -  reinterpret_cast<__int128_t>(get_pc()); // Get Current PC
+        __uint128_t diff_addr = init_pc_addr -  reinterpret_cast<__int128_t>(getPC()); // Get Current PC
         // Now let's build a hash relative to the PC difference (should remain constant)
         __int128_t hash_module  = diff_addr<<116 | diff_addr>>12;
         // Keep the hash chain
-        debugPrintHash("FIR-pre", hash_module);
         hash_seed = hash_seed ^ hash_module;
         debugPrintHash("FIR", hash_seed);
     }
@@ -165,8 +167,9 @@ void FIRFilter(uint16_t * input, float * output) {
  // Main
 
 int main(int argc, char* argv[]){
-    main_setup();
-    main_loop();
+    mainSetup();
+    int iter = atoi(argv[1]);
+    mainLoop(iter);
 }
 
 
@@ -207,28 +210,28 @@ void disableAllFlags(){
 
 
  // Simulator Mockup Methods
-bool simCheckAttestation(){
-    cout << "Check Attestation Called" <<endl;
-    std::uniform_int_distribution<> uchar(0, 255);
-    return (uchar(gen) > 127);
-} 
-bool simCheckAttestationTurn(){
-    cout << "Check Turn Called "<< endl;
-    std::uniform_int_distribution<> uchar(0, 255);
-    return (uchar(gen) > 150);
-}
-uint16_t simGetChallengeId(){
-    cout<< "Get Challenge Called "<< endl;
-    std::uniform_int_distribution<> uchar(0, 2);
-    return uchar(gen);
-}
-__int128_t simGetChallengeSeed(){
-    cout<< "Get Challenge Seed Called "<< endl;
-    std::uniform_int_distribution<> distrib;
-    __int128_t out = (static_cast<__int128_t>(distrib(gen)) << 96) | (static_cast<__int128_t>(distrib(gen)) << 64) |
-                     (static_cast<__int128_t>(distrib(gen)) << 32) | (static_cast<__int128_t>(distrib(gen)));
-    return out;
-}
+// bool simCheckAttestation(){
+//     cout << "Check Attestation Called" <<endl;
+//     std::uniform_int_distribution<> uchar(0, 255);
+//     return (uchar(gen) > 127);
+// } 
+// bool SimCheckAttestationTurn(){
+//     cout << "Check Turn Called "<< endl;
+//     std::uniform_int_distribution<> uchar(0, 255);
+//     return (uchar(gen) > 150);
+// }
+// uint16_t SimGetChallengeId(){
+//     cout<< "Get Challenge Called "<< endl;
+//     std::uniform_int_distribution<> uchar(0, 2);
+//     return uchar(gen);
+// }
+// __int128_t simGetChallengeSeed(){
+//     cout<< "Get Challenge Seed Called "<< endl;
+//     std::uniform_int_distribution<> distrib;
+//     __int128_t out = (static_cast<__int128_t>(distrib(gen)) << 96) | (static_cast<__int128_t>(distrib(gen)) << 64) |
+//                      (static_cast<__int128_t>(distrib(gen)) << 32) | (static_cast<__int128_t>(distrib(gen)));
+//     return out;
+// }
 void simSendChallengeResult(__int128_t result) {
     cout <<"Send Challenge Called" <<endl;
     debugPrintHash("SIM", result);

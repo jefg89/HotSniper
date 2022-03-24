@@ -24,6 +24,7 @@
 # error "PRId64 is not defined. Make sure fixed_types.h is first in the include order."
 #endif
 
+typedef __uint128_t UInt128;
 typedef uint64_t UInt64;
 typedef uint32_t UInt32;
 typedef uint16_t UInt16;
