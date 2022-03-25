@@ -31,3 +31,7 @@ bool DevUnderAttestation::verifyChallenge(UInt128 challenge_result) {
     m_challenge_id = 0;
     return true;
 }
+
+void DevUnderAttestation::printChallengeId() {
+    cout<<"[Attestation Manager] [DUA/"<< m_thread_id <<"]:" << " Challenge ID = 0x" << m_challenge_id <<endl;
+}

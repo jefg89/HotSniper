@@ -58,8 +58,7 @@ UInt64 handleMagicInstruction(thread_id_t thread_id, UInt64 cmd, UInt64 arg0, UI
    }
    case SIM_CMD_ATTESTATION_TURN:
    {
-      LOG_PRINT_WARNING("Check attestation turn not implemented yet, returning true by default");
-      return  Sim()->getThreadManager()->getThreadFromID(thread_id)->isnextForAttestation();
+      return  Sim()->getAttestationManager()->checkAttestationTurn(thread_id);
    }
    case SIM_CMD_CHALLENGE_ID:
    {

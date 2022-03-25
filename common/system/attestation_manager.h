@@ -11,6 +11,7 @@
 #include "thread.h"
 #include "thread_manager.h"
 #include <vector>
+#include <queue>
 #include <random>
 #include <list>
 
@@ -28,7 +29,7 @@ public:
     UInt16 getChallengeId(thread_id_t thread_id);
     bool checkChallengeResult(thread_id_t thread_id, UInt128 challenge_result);
     bool checkUnderAttestation(thread_id_t thread_id);
-    void unsetAttestation(thread_id_t thread_id);
+    bool checkAttestationTurn(thread_id_t thread_id);
     
 
     
@@ -37,7 +38,9 @@ private:
     vector<DevUnderAttestation*> m_devices;
     DevUnderAttestation * getDevicebyThreadId(thread_id_t);
     UInt128 computeChallengeHash();
-    UInt16 computeChallengeId();     
+    UInt16 computeChallengeId();
+    void unsetAttestation(thread_id_t thread_id);
+    queue<DevUnderAttestation *> m_fifo;    
 };
 
 #endif
