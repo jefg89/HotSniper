@@ -27,19 +27,10 @@ public:
     UInt64 getChallengeHash(thread_id_t thread_id);
     UInt16 getChallengeId(thread_id_t thread_id);
     bool checkChallengeResult(thread_id_t thread_id, UInt128 challenge_result);
+    bool checkUnderAttestation(thread_id_t thread_id);
+    void unsetAttestation(thread_id_t thread_id);
     
-    
-    //Tile * getTileFromId(tile_id_t tileId);
- /*    void printTileInfo();
-    void registerThreadOnTile(thread_id_t threadId, core_id_t coreId);
-    void unregisterThreadOnTile(thread_id_t threadId, core_id_t coreId);
-    void setThreadSharedTime(thread_id_t threadId, UInt32 sharedTime);
-    UInt32 getMaxSharedTimeOnTile(tile_id_t tileId);
-    UInt32 getActiveThreadsOnTile(tile_id_t tileId);
-    tile_id_t findTileFromThreadId(thread_id_t tileId);
-    bool isSecure(tile_id_t tile_id) {return m_has_secure.at(tile_id);}
-    void setSecure(core_id_t core_id);
-    void unsetSecure(core_id_t core_id); */
+
     
 private:
     std::mt19937 gentr;

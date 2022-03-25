@@ -18,6 +18,8 @@
 #include "policies/dvfsTestStaticPower.h"
 #include "policies/mapFirstUnused.h"
 
+#include "policies/attestAll.h"
+
 #include <iomanip>
 #include <random>
 #include <vector>
@@ -137,6 +139,7 @@ SchedulerOpen::SchedulerOpen(ThreadManager *thread_manager)
 	frequencyStepSize = (int)(1000 * Sim()->getCfg()->getFloat("scheduler/open/dvfs/frequency_step_size") + 0.5);
 	dvfsEpoch = atol(Sim()->getCfg()->getString("scheduler/open/dvfs/dvfs_epoch").c_str());
 	migrationEpoch = atol(Sim()->getCfg()->getString("scheduler/open/migration/epoch").c_str());
+	attestationEpoch = atol(Sim()->getCfg()->getString("scheduler/open/attestation/epoch").c_str());
 
 	m_core_mask.resize(Sim()->getConfig()->getApplicationCores());
 	for (core_id_t core_id = 0; core_id < (core_id_t)Sim()->getConfig()->getApplicationCores(); core_id++) {
@@ -268,6 +271,7 @@ SchedulerOpen::SchedulerOpen(ThreadManager *thread_manager)
 	initMappingPolicy(Sim()->getCfg()->getString("scheduler/open/logic").c_str());
 	initDVFSPolicy(Sim()->getCfg()->getString("scheduler/open/dvfs/logic").c_str());
 	initMigrationPolicy(Sim()->getCfg()->getString("scheduler/open/migration/logic").c_str());
+	initAttestationPolicy(Sim()->getCfg()->getString("scheduler/open/attestation/logic").c_str());
 }
 
 /** initMappingPolicy
@@ -326,6 +330,22 @@ void SchedulerOpen::initMigrationPolicy(String policyName) {
 	} //else if (policyName ="XYZ") {... } //Place to instantiate a new migration logic. Implementation is put in "policies" package.
 	else {
 		cout << "\n[Scheduler] [Error]: Unknown Migration Algorithm" << endl;
+ 		exit (1);
+	}
+}
+
+/** initAttestationPolicy
+ * Initialize the attestation policy to the policy with the given name
+ */
+void SchedulerOpen::initAttestationPolicy(String policyName) {
+	cout << "[Scheduler] [Info]: Initializing attestation policy" << endl;
+	if (policyName == "off") {
+		attestationPolicy = NULL;
+	} else if (policyName == "all") { 
+		attestationPolicy = new AttestAll(performanceCounters);
+	} // else if (policyName ="XYZ") {... } //Place to instantiate a new attestation logic. Implementation is put in "policies" package.
+	else {
+		cout << "\n[Scheduler] [Error]: Unknown Attestation Algorithm" << endl;
  		exit (1);
 	}
 }
@@ -1268,6 +1288,21 @@ void SchedulerOpen::executeMigrationPolicy(SubsecondTime time) {
 }
 
 
+void SchedulerOpen::executeAttestationPolicy() {
+	vector<bool> activeCores(numberOfCores);
+	for (int i = 0; i < numberOfCores; i++) {
+		activeCores.at(i) = isAssignedToTask(i);
+	}
+	std::vector<int> candidates = attestationPolicy->getCandidates(activeCores);
+	for (size_t i = 0; i < candidates.size(); i++){
+		 thread_id_t thread = systemCores.at(candidates.at(i)).assignedThreadID;
+		 Sim()->getAttestationManager()->setAttestation(thread);
+	}
+	
+	//TODO: perform actual attestation through Attestation Manager
+}
+
+
 /** periodic
     This function is called periodically by Sniper at Interval of 100ns.
 */
@@ -1290,13 +1325,22 @@ void SchedulerOpen::periodic(SubsecondTime time) {
 		}
 	}
 
+	if ((attestationPolicy != NULL) && (time.getNS() % attestationEpoch == 0)) {
+		cout << "\n[Scheduler]: Attestation invoked at " << formatTime(time) << endl;
+		executeAttestationPolicy();
+		//executeMigrationPolicy(time);
+	}
+
 	if ((migrationPolicy != NULL) && (time.getNS() % migrationEpoch == 0)) {
 		cout << "\n[Scheduler]: Migration invoked at " << formatTime(time) << endl;
 
 		executeMigrationPolicy(time);
 	}
-
-	if ((dvfsPolicy != NULL) && (time.getNS() % dvfsEpoch == 0)) {
+/*
+	Let's just not do any DVFS stuff for now :)
+	Uncomment next block if needed
+*/
+/* 	if ((dvfsPolicy != NULL) && (time.getNS() % dvfsEpoch == 0)) {
 		cout << "\n[Scheduler]: DVFS Control Loop invoked at " << formatTime(time) << endl;
 
 		executeDVFSPolicy();
@@ -1305,7 +1349,7 @@ void SchedulerOpen::periodic(SubsecondTime time) {
 		for (int coreCounter = 0; coreCounter < numberOfCores; coreCounter++) {
 			frequencies.push_back(Sim()->getMagicServer()->getFrequency(coreCounter));
 		}
-	}
+	} */
 
 	if (time.getNS () % mappingEpoch == 0) {
 		

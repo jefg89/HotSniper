@@ -54,8 +54,7 @@ UInt64 handleMagicInstruction(thread_id_t thread_id, UInt64 cmd, UInt64 arg0, UI
    }
    case SIM_CMD_CHECK_ATTESTATION: 
    {
-      LOG_PRINT_WARNING("Check attestation not implemented yet, returning true by default");
-      return  Sim()->getThreadManager()->getThreadFromID(thread_id)->isUnderAttestation();
+      return  Sim()->getAttestationManager()->checkUnderAttestation(thread_id);
    }
    case SIM_CMD_ATTESTATION_TURN:
    {

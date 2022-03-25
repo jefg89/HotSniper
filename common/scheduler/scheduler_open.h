@@ -13,6 +13,8 @@
 #include "policies/dvfspolicy.h"
 #include "policies/mappingpolicy.h"
 #include "policies/migrationpolicy.h"
+#include "policies/attestationpolicy.h"
+#include "attestation_manager.h"
 
 
 class SchedulerOpen : public SchedulerPinnedBase {
@@ -73,6 +75,12 @@ class SchedulerOpen : public SchedulerPinnedBase {
 
 		int setAffinity (thread_id_t thread_id);
 		bool schedule (int taskID, bool isInitialCall, SubsecondTime time);
+
+		AttestationPolicy * attestationPolicy = NULL;
+		long attestationEpoch;
+		void initAttestationPolicy(String policyName);
+		void executeAttestationPolicy();
+
 		
 };
 

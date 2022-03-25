@@ -7,7 +7,7 @@
 #include <chrono>
 #include "sim_api.h"
 
-#define DEBUG 1
+#define DEBUG 0
 #define SAMPLES 1024
 
 
@@ -59,6 +59,7 @@ int mainLoop(int iter) {
     // "Infinite" loop
     //while (true) {
     for (size_t i = 0; i < iter; i++){
+        //cout << "*************Iteration = " <<std::dec<<i<<" *************"<<endl;
         // ADDED CODE HERE
         // Polls for attestation request by Verifier (simulator).
         // This has the same return value for all applications (true/false) -> simultaneous attestation
@@ -84,7 +85,7 @@ int mainLoop(int iter) {
         // END of ADDED CODE
 
         processing_:
-            cout << "Doing normal processing" <<endl;
+            cout << "Doing normal processing on iteration " <<std::dec<< i <<endl;
 
             uint16_t inputs [SAMPLES];
             float outputs [SAMPLES];

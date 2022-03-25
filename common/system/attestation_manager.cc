@@ -1,4 +1,5 @@
 #include "attestation_manager.h"
+#include <algorithm>
 
 using namespace std;
 
@@ -61,12 +62,31 @@ bool AttestationManager::checkChallengeResult(thread_id_t thread_id, UInt128 cha
     DevUnderAttestation * curr_device = getDevicebyThreadId(thread_id);
     // The verification is done with by the DUA module itself
     // let's return what they say
-    return curr_device->verifyChallenge(challenge_result);
+    if (curr_device->verifyChallenge(challenge_result)) {
+        unsetAttestation(thread_id);
+        return true;
+    }
+    return false;
 
 }
 
+bool AttestationManager::checkUnderAttestation(thread_id_t thread_id) {
+    DevUnderAttestation * curr_device = getDevicebyThreadId(thread_id);
+    if (curr_device)
+        return true;
+    return false;
+}
 
-
+void AttestationManager::unsetAttestation(thread_id_t thread_id) {
+    for (size_t i = 0; i < m_devices.size(); i++) {
+        if (m_devices.at(i)->m_thread_id == thread_id)
+            m_devices.at(i)->m_marked_for_delete = true;
+    }
+              
+    m_devices.erase(std::remove_if(m_devices.begin(), m_devices.end(), 
+                    [] (DevUnderAttestation * t) {return t->m_marked_for_delete;}),
+                    m_devices.end());
+}
 
 // Private methods
 DevUnderAttestation *  AttestationManager::getDevicebyThreadId(thread_id_t thread_id) {

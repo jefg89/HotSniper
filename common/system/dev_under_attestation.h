@@ -16,7 +16,7 @@ public:
     UInt128 getChallengeHash() const {return m_challenge_hash; }
     bool verifyChallenge(UInt128 challenge_result);
     void printHash();
-
+    bool m_marked_for_delete = false;
 
 private:
     

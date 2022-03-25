@@ -15,7 +15,7 @@ DevUnderAttestation::~DevUnderAttestation() {
 void DevUnderAttestation::printHash() {
     long int MSB = m_challenge_hash >> 64;
     long int LSB = ((m_challenge_hash << 64) >> 64);
-    cout<<"New Hash = 0x" << setfill('0') << setw(16) << right << hex << MSB << setfill('0') << setw(16) << right << hex << LSB <<endl;
+     cout<<"[Attestation Manager] [DUA/"<< m_thread_id <<"]:" <<" Seed Hash = 0x" << setfill('0') << setw(16) << right << hex << MSB << setfill('0') << setw(16) << right << hex << LSB <<endl;
 }
 
 bool DevUnderAttestation::verifyChallenge(UInt128 challenge_result) {
@@ -25,7 +25,7 @@ bool DevUnderAttestation::verifyChallenge(UInt128 challenge_result) {
     
     long int MSB = challenge_result >> 64;
     long int LSB = ((challenge_result << 64) >> 64);
-    cout<<"Received Hash = 0x" << setfill('0') << setw(16) << right << hex << MSB << setfill('0') << setw(16) << right << hex << LSB <<endl;
+    cout<<"[Attestation Manager] [DUA/"<< m_thread_id <<"]:" << " Received Hash = 0x" << setfill('0') << setw(16) << right << hex << MSB << setfill('0') << setw(16) << right << hex << LSB <<endl;
     //Do not forget to clean stuff
     m_challenge_hash = 0;
     m_challenge_id = 0;
