@@ -9,6 +9,7 @@
 
 #define DEBUG 0
 #define SAMPLES 1024
+const unsigned char PRIVATE_KEY[16] = "123456789abcdef";
 
 
 using namespace std;
@@ -19,10 +20,9 @@ std::vector<bool> attestation_flags = {false, false, false};
 __uint128_t hash_seed;
 
 
-
 void readADC(uint16_t * input);
-
 void FIRFilter(uint16_t * input, float * output);
+void encryptAndSave(float * raw_data, const unsigned char * PRIVATE_KEY);
 
 
 void computeChallenge(uint16_t challenge);
@@ -51,7 +51,6 @@ int mainLoop(int iter) {
     if (DEBUG)
         cout <<"Entering main loop for " <<iter << " iterations" <<endl;
     for (size_t i = 0; i < iter; i++){
-        //cout << "*************Iteration = " <<std::dec<<i<<" *************"<<endl;
         // ADDED CODE HERE
         // Polls for attestation request by Verifier (simulator).
         // This has the same return value for all applications (true/false) -> simultaneous attestation
@@ -62,11 +61,11 @@ int mainLoop(int iter) {
                 cout << "Starting atatestation" <<endl;
             while (!myTurn) 
                 // Wait until it's my turn on the queue
-                myTurn = SimCheckAttestationTurn(); //need id?
+                myTurn = SimCheckAttestationTurn(); 
             if (DEBUG)
                 cout << "It's my turn" <<endl;
             // If it's my turn, get the challenge
-            uint16_t challenge = SimGetChallengeId(); //need id?
+            uint16_t challenge = SimGetChallengeId(); 
             // Now get the challenge's hash
             hash_seed = SimGetChallengeHashMSW(); // Most Significant Word
             hash_seed = hash_seed << 64 | SimGetChallengeHashLSW(); //Least Significant Word
@@ -89,18 +88,22 @@ int mainLoop(int iter) {
             readADC(inputs);
             // Applies Low-Pass FIR Filter
             FIRFilter(inputs, outputs);
-
-            // encrypted = AES_encrypt(filtered, KEY);
-            // send(encrypted, time);
+            // Encrypts data and save it in file
+            encryptAndSave(outputs, PRIVATE_KEY);
 
         if (attestation & myTurn) {
             // Send the answer back to the Verifier (simulator).
             uint64_t hash_msw = (hash_seed >> 64);
             uint64_t hash_lsw = ((hash_seed << 64) >> 64);
-            SimSendChallengeResult(hash_msw, hash_lsw); //need id?
+            if (SimSendChallengeResult(hash_msw, hash_lsw)) {
             myTurn = false;
             attestation = false;
             disableAllFlags();
+            }
+            else {
+                cout<<"ERROR: Attestation FAILED"<<endl;
+                exit(EXIT_FAILURE);
+            }
         }
         SimRoiEnd();
     }
@@ -165,6 +168,42 @@ void FIRFilter(uint16_t * input, float * output) {
     }
 }
 
+//Encrypts data and save them to FILE
+void encryptAndSave(float * raw_data, const unsigned char* PRIVATE_KEY) {
+    int64_t init_pc_addr;  
+    if (attestation_flags.at(0))
+        init_pc_addr =  reinterpret_cast<int64_t>(getPC()); // Get initial PC
+    
+    unsigned char * B16_temp_buff = (unsigned char*) malloc(16 * sizeof (unsigned char));
+    AES_KEY *new_key = new AES_KEY ;
+    new_key->rounds = 10;
+    int retval = AES_set_encrypt_key(PRIVATE_KEY, 128, new_key);
+    FILE *fp;  
+    //TODO: Multiple applications will share this file
+    // we should create a unique ID per application
+    // this impliues incluing a Sim call to get an id
+    fp = fopen("encrypted.sec", "wa"); 
+
+    for (size_t i = 0; i < SAMPLES; i = i + 16){
+        unsigned char * B16_word = (unsigned char *) (raw_data + i);
+        *B16_temp_buff = *B16_word;
+        
+        AES_encrypt(B16_temp_buff, B16_temp_buff, new_key);
+        fwrite (B16_temp_buff , sizeof(unsigned char *), 16, fp);
+    }
+    
+    fclose (fp);
+    if (attestation_flags.at(2)) {
+        if (DEBUG)
+            cout << "encryptAndSave under attestation " << endl;
+        __uint128_t diff_addr = init_pc_addr -  reinterpret_cast<__uint128_t>(getPC()); // Get Current PC
+        // Now let's build a hash relative to the PC difference (should remain constant)
+        __uint128_t hash_module  = diff_addr<<116 | diff_addr>>12;
+        // Keep the hash chain
+        hash_seed = hash_seed ^ hash_module;
+        debugPrintHash("ENCRYPT", hash_seed);
+    }
+}
 
  // Main
 
