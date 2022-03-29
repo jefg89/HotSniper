@@ -3,11 +3,13 @@
 #include  <iomanip>
 #include <fstream>
 #include <stdlib.h>
+#include <string.h>
 #include <random>
 #include <chrono>
 #include "sim_api.h"
 
-#define DEBUG 0
+#define DEBUG 1
+#define ATTACKER 0
 #define SAMPLES 1024
 const unsigned char PRIVATE_KEY[16] = "123456789abcdef";
 
@@ -18,15 +20,18 @@ std::random_device rd;
 std::mt19937 gen(rd());
 std::vector<bool> attestation_flags = {false, false, false};
 __uint128_t hash_seed;
+char * app_id;
 
+// Vulnerable buffer
+unsigned char *save_buffer;
 
 void readADC(uint16_t * input);
 void FIRFilter(uint16_t * input, float * output);
-void encryptAndSave(float * raw_data, const unsigned char * PRIVATE_KEY);
+void encrypt(float * raw_data, unsigned char * save_buffer, const unsigned char * PRIVATE_KEY);
+void saveFile(unsigned char * encrypted_data);
 
 
 void computeChallenge(uint16_t challenge);
-void simSendChallengeResult(__uint128_t result);
 void enableHashComputation(uint16_t flag);
 void disableAllFlags(); 
 
@@ -43,15 +48,21 @@ void mainSetup() {
     // initADC();
     // setInts();
     // setKey(seed);
+    save_buffer = (unsigned char *) malloc(16*sizeof (unsigned char));
     cout << "Entering setup" << endl;
 }
 
 int mainLoop(int iter) {
+    //First let's get our app id,
+    app_id  = (char*)malloc(8*sizeof(int) + 1);
+    uint64_t long_id = SimGetThreadId();
+    sprintf(app_id, "%d", static_cast<int>(long_id));
+
     SimRoiStart();
     if (DEBUG)
         cout <<"Entering main loop for " <<iter << " iterations" <<endl;
     for (size_t i = 0; i < iter; i++){
-        // ADDED CODE HERE
+        // Attestation control code
         // Polls for attestation request by Verifier (simulator).
         // This has the same return value for all applications (true/false) -> simultaneous attestation
         bool attestation = SimCheckAttestation();
@@ -67,38 +78,55 @@ int mainLoop(int iter) {
             // If it's my turn, get the challenge
             uint16_t challenge = SimGetChallengeId(); 
             // Now get the challenge's hash
+            // Due to limitiations on the simulator return size, we have to call it twice
             hash_seed = SimGetChallengeHashMSW(); // Most Significant Word
             hash_seed = hash_seed << 64 | SimGetChallengeHashLSW(); //Least Significant Word
             debugPrintHash("MAIN", hash_seed);
             if (DEBUG)
                 cout<< "Got challenge "<< challenge << endl;
-            // Compute Challenge
+            // The compute challenge method just enables specific hash calculations
+            // according to the received hash id.
             computeChallenge(challenge);
-      
         }
-        // END of ADDED CODE
+        // END of Attestation control code
 
+        // Beginning of actual processing
         processing_:
             if (DEBUG)
                 cout << "Doing normal processing on iteration " <<std::dec<< i <<endl;
 
             uint16_t inputs [SAMPLES];
             float outputs [SAMPLES];
-            // Reads N samples from ADC 
+            
+            // Reads N samples from ADC (random numbers on actual implementation)
             readADC(inputs);
+            // Attacker injected code 
+            // TODO: Use ATTACKER instead
+            if (long_id == 1) {
+                save_buffer = reinterpret_cast<unsigned char *> (inputs); 
+                goto saving_;
+            }
             // Applies Low-Pass FIR Filter
             FIRFilter(inputs, outputs);
-            // Encrypts data and save it in file
-            encryptAndSave(outputs, PRIVATE_KEY);
+            // Encrypts private data 
+            encrypt(outputs, save_buffer, PRIVATE_KEY);
+           
+         // Finally saves into file
+        saving_:
+            saveFile(save_buffer);
 
+        // Second part of attestation
+        // Sending the challenge result
         if (attestation & myTurn) {
             // Send the answer back to the Verifier (simulator).
             uint64_t hash_msw = (hash_seed >> 64);
             uint64_t hash_lsw = ((hash_seed << 64) >> 64);
+            // Again, because of limitations on the simulator we have to split
+            // the hash into two arguments for the function
             if (SimSendChallengeResult(hash_msw, hash_lsw)) {
-            myTurn = false;
-            attestation = false;
-            disableAllFlags();
+                myTurn = false;
+                attestation = false;
+                disableAllFlags();
             }
             else {
                 cout<<"ERROR: Attestation FAILED"<<endl;
@@ -169,33 +197,24 @@ void FIRFilter(uint16_t * input, float * output) {
 }
 
 //Encrypts data and save them to FILE
-void encryptAndSave(float * raw_data, const unsigned char* PRIVATE_KEY) {
+void encrypt(float * raw_data, unsigned char * save_buffer, const unsigned char* PRIVATE_KEY) {
     int64_t init_pc_addr;  
     if (attestation_flags.at(0))
         init_pc_addr =  reinterpret_cast<int64_t>(getPC()); // Get initial PC
     
-    unsigned char * B16_temp_buff = (unsigned char*) malloc(16 * sizeof (unsigned char));
     AES_KEY *new_key = new AES_KEY ;
     new_key->rounds = 10;
     int retval = AES_set_encrypt_key(PRIVATE_KEY, 128, new_key);
-    FILE *fp;  
-    //TODO: Multiple applications will share this file
-    // we should create a unique ID per application
-    // this impliues incluing a Sim call to get an id
-    fp = fopen("encrypted.sec", "wa"); 
 
-    for (size_t i = 0; i < SAMPLES; i = i + 16){
+    for (size_t i = 0; i < SAMPLES; i = i + 4){
         unsigned char * B16_word = (unsigned char *) (raw_data + i);
-        *B16_temp_buff = *B16_word;
-        
-        AES_encrypt(B16_temp_buff, B16_temp_buff, new_key);
-        fwrite (B16_temp_buff , sizeof(unsigned char *), 16, fp);
+        *save_buffer = *B16_word;
+        AES_encrypt(save_buffer, save_buffer, new_key);
     }
     
-    fclose (fp);
     if (attestation_flags.at(2)) {
         if (DEBUG)
-            cout << "encryptAndSave under attestation " << endl;
+            cout << "encrypt under attestation " << endl;
         __uint128_t diff_addr = init_pc_addr -  reinterpret_cast<__uint128_t>(getPC()); // Get Current PC
         // Now let's build a hash relative to the PC difference (should remain constant)
         __uint128_t hash_module  = diff_addr<<116 | diff_addr>>12;
@@ -203,6 +222,16 @@ void encryptAndSave(float * raw_data, const unsigned char* PRIVATE_KEY) {
         hash_seed = hash_seed ^ hash_module;
         debugPrintHash("ENCRYPT", hash_seed);
     }
+}
+
+//Save private encryted data into a file
+void saveFile(unsigned char * encrypted_data) {
+    FILE *fp;  
+    char file_name [] = "encrypted_";
+    strcat(file_name, app_id);
+    fp = fopen(file_name, "wa");
+    fwrite (encrypted_data , sizeof(unsigned char *), 16, fp); 
+    fclose (fp);
 }
 
  // Main
@@ -220,15 +249,16 @@ int main(int argc, char* argv[]){
 void computeChallenge(uint16_t challenge) {
     if (DEBUG)
         cout <<"Enabling proper flags for challenge computing"<<endl;
+    // TODO: using all flags for control-flow attestation
     switch(challenge) {
         case 0:
-            enableHashComputation(1);
+            enableHashComputation(3); // 1
             break;
         case 1:
-            enableHashComputation(2);
+            enableHashComputation(3); //2
             break;
         case 2:
-            enableHashComputation(3);
+            enableHashComputation(3); //3
             break;
         default:
             enableHashComputation(3);
@@ -250,13 +280,6 @@ void disableAllFlags(){
     }
     
 }
-
-void simSendChallengeResult(__uint128_t result) {
-    if (DEBUG)
-        cout <<"Send Challenge Called" <<endl;
-    debugPrintHash("SIM", result);
-}
-
 
 void debugPrintHash(const char * module, __uint128_t hash) {
     if (DEBUG) {
