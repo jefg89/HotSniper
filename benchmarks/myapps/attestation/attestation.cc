@@ -1,16 +1,18 @@
 #include <openssl/aes.h>
 #include <iostream>
-#include  <iomanip>
+#include <iomanip>
 #include <fstream>
 #include <stdlib.h>
 #include <string.h>
 #include <random>
 #include <chrono>
 #include "sim_api.h"
+#include <execinfo.h>
 
-#define DEBUG 1
+#define DEBUG 0
 #define ATTACKER 0
 #define SAMPLES 1024
+#define CHARS 1024
 const unsigned char PRIVATE_KEY[16] = "123456789abcdef";
 
 
@@ -40,6 +42,7 @@ void debugPrintHash(const char * module,__uint128_t hash);
 __attribute__ ((__noinline__))
 void * getPC () { return __builtin_return_address(0); }
 
+void print_trace();
 
 // Initialization method
 // Entry point for the program
@@ -79,8 +82,8 @@ int mainLoop(int iter) {
             uint16_t challenge = SimGetChallengeId(); 
             // Now get the challenge's hash
             // Due to limitiations on the simulator return size, we have to call it twice
-            hash_seed = SimGetChallengeHashMSW(); // Most Significant Word
-            hash_seed = hash_seed << 64 | SimGetChallengeHashLSW(); //Least Significant Word
+            hash_seed = SimGetChallengeHash(1); // Most Significant Word
+            hash_seed = hash_seed << 64 | SimGetChallengeHash(0); //Least Significant Word
             debugPrintHash("MAIN", hash_seed);
             if (DEBUG)
                 cout<< "Got challenge "<< challenge << endl;
@@ -287,4 +290,20 @@ void debugPrintHash(const char * module, __uint128_t hash) {
         long int LSB = ((hash << 64) >> 64);
         cout <<"[" << module << "]: "<<"Hash = 0x" << setfill('0') << setw(16) << right << hex << MSB << setfill('0') << setw(16) << right << hex << LSB <<endl;
     }
+}
+
+
+void print_trace() {
+    int size;
+    void * symbols[CHARS];
+    char ** strings;
+    size = backtrace(symbols,CHARS);
+    strings = backtrace_symbols(symbols,size);
+
+    if (strings != NULL){
+        printf ("Obtained %d stack frames.\n", size);
+        for (int i = 0; i < size; i++)
+        printf ("%s\n", strings[i]);
+    }
+    free (strings);
 }

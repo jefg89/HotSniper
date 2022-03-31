@@ -64,13 +64,9 @@ UInt64 handleMagicInstruction(thread_id_t thread_id, UInt64 cmd, UInt64 arg0, UI
    {
       return Sim()->getAttestationManager()->getChallengeId(thread_id);
    }
-   case SIM_CMD_CHALLENGE_HASH_LSW:
+   case SIM_CMD_CHALLENGE_HASH:
    {
-      return Sim()->getAttestationManager()->getChallengeHash(thread_id);
-   }
-      case SIM_CMD_CHALLENGE_HASH_MSW:
-   {
-      return Sim()->getAttestationManager()->getChallengeHash(thread_id);
+      return Sim()->getAttestationManager()->getChallengeHash(thread_id, arg0);
    }
    case SIM_CMD_CHALLENGE_RESULT:
    {

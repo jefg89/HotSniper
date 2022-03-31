@@ -1,113 +1,80 @@
 #include "attestation_manager.h"
+#include <iostream>
 #include <algorithm>
+#include <numeric>
+#include <list>
 
 using namespace std;
 
+#define MSW 1
+#define LSW 0
 
 AttestationManager::AttestationManager() {
-    //TODO: initialize stuff here
+    trustedHwPlatform = new TrustedHwPlatform;
 }
 AttestationManager::~AttestationManager() {
-    for (size_t i = 0; i < m_devices.size(); i++) 
-        free(m_devices.at(i));
+    delete(trustedHwPlatform);
 }
 
 void AttestationManager::setAttestation(thread_id_t thread_id){
     cout <<"[Attestation Manager]: Setting Attestation for Thread " << thread_id <<endl;
-    DevUnderAttestation * curr_device = getDevicebyThreadId(thread_id);
-    if (!curr_device) {
-        curr_device = new DevUnderAttestation(thread_id);
-        m_devices.push_back(curr_device);
-        m_fifo.push(curr_device);
-    }
+    m_curr_attest_threads.push_back(thread_id);
+    m_curr_attest_turn.push(thread_id);
 }
 
 // This method needs to be called twice for a single Hash
-// due to limitations on the Simulator return size
-// the first time we return the Most Significant Word (MSW)
-// the second time we return the Least Significicant Word (LSW)
-UInt64 AttestationManager::getChallengeHash(thread_id_t thread_id){
-    DevUnderAttestation * curr_device = getDevicebyThreadId(thread_id);
-    if (!curr_device) {
-        curr_device = new DevUnderAttestation(thread_id);
-        m_devices.push_back(curr_device);
+// due to limitations on the Simulator return size.
+// The word parameter determines which word to return
+// 0 for Least Significant Word (LSW)
+// 1 for Most Sifnigicant Word (MSW)
+UInt64 AttestationManager::getChallengeHash(thread_id_t thread_id, UInt8 word){
+    UInt128 challengeHash = trustedHwPlatform->getChallengeHash(thread_id);
+    UInt64 returnHash;
+    switch (word){
+        case LSW:
+            returnHash = (challengeHash << 64) >> 64;
+            break;
+        case MSW:
+            returnHash = challengeHash >> 64;
+            break;
+        default:
+            returnHash = (challengeHash << 64) >> 64;
+            break;
     }
-    //If this is the first time we get called
-    if(!curr_device->getChallengeHash()) {
-        // compute and store a new hash
-        curr_device->setChallengeHash(computeChallengeHash());
-        curr_device->printHash();
-        //return MSW
-        return curr_device->getChallengeHash() >> 64;
-    }
-    //if this is the second time we get called
-    //return LSW
-    return (curr_device->getChallengeHash() << 64) >> 64;
+    return returnHash;
 }
 
 UInt16  AttestationManager::getChallengeId(thread_id_t thread_id){
-    DevUnderAttestation * curr_device = getDevicebyThreadId(thread_id);
-    if (!curr_device) {
-        curr_device = new DevUnderAttestation(thread_id);
-        m_devices.push_back(curr_device);
-    }
-    curr_device->setChallengeId(computeChallengeId());
-    curr_device->printChallengeId();
-    return curr_device->getChallengeId();
+    return trustedHwPlatform->getChallengeId(thread_id);
 }
 
 bool AttestationManager::checkChallengeResult(thread_id_t thread_id, UInt128 challenge_result) {
-    DevUnderAttestation * curr_device = getDevicebyThreadId(thread_id);
-    // The verification is done with by the DUA module itself
-    // let's return what they say
-    if (curr_device->verifyChallenge(challenge_result)) {
-        unsetAttestation(thread_id);
-        m_fifo.pop();
-        return true;
-    }
-    return false;
+    // The verification is done by the Trusted Hardware Platform.
+    // unsets the attestation flag for the thread;
+    unsetAttestation(thread_id);
+    // remove the thread for the current turn queue;
+    m_curr_attest_turn.pop();
+    return trustedHwPlatform->checkChallengeResult(thread_id, challenge_result);
 
 }
 
 bool AttestationManager::checkUnderAttestation(thread_id_t thread_id) {
-    DevUnderAttestation * curr_device = getDevicebyThreadId(thread_id);
-    if (curr_device)
-        return true;
+    for (size_t i = 0; i < m_curr_attest_threads.size(); i++){
+        if (m_curr_attest_threads.at(i) == thread_id)
+            return true;
+    }
     return false;
 }
 
 bool AttestationManager::checkAttestationTurn(thread_id_t thread_id) {
-    return (m_fifo.front()->m_thread_id == thread_id);
-}
-
-// Private methods
-DevUnderAttestation *  AttestationManager::getDevicebyThreadId(thread_id_t thread_id) {
-    for (size_t i = 0; i < m_devices.size(); i++) {
-        if (m_devices.at(i)->m_thread_id == thread_id)
-            return m_devices.at(i);
-    }
-    return NULL;
-    
-}
-UInt128 AttestationManager::computeChallengeHash() {
-    std::uniform_int_distribution<> distrib;
-    __int128_t out = (static_cast<__int128_t>(distrib(gentr)) << 96) | (static_cast<__int128_t>(distrib(gentr)) << 64) |
-                     (static_cast<__int128_t>(distrib(gentr)) << 32) | (static_cast<__int128_t>(distrib(gentr)));
-    return out;
-}
-
-UInt16 AttestationManager::computeChallengeId() {
-    std::uniform_int_distribution<> uchar(0, 2);
-    return uchar(gentr);
+    return (m_curr_attest_turn.front() == thread_id);
 }
 
 void AttestationManager::unsetAttestation(thread_id_t thread_id) {
-    for (size_t i = 0; i < m_devices.size(); i++) {
-        if (m_devices.at(i)->m_thread_id == thread_id)
-            m_devices.at(i)->m_marked_for_delete = true;
+    for (auto iter = m_curr_attest_threads.begin()  ; iter != m_curr_attest_threads.end() ; ){
+        if (*iter == thread_id)
+            iter = m_curr_attest_threads.erase(iter);
+        else
+            ++iter;
     }
-              
-    m_devices.erase(std::remove_if(m_devices.begin(), m_devices.end(), 
-                    [] (DevUnderAttestation * t) {return t->m_marked_for_delete;}),
-                    m_devices.end());
 }

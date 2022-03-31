@@ -21,9 +21,8 @@
 #define SIM_CMD_CHECK_ATTESTATION 16
 #define SIM_CMD_ATTESTATION_TURN  17
 #define SIM_CMD_CHALLENGE_ID      18
-#define SIM_CMD_CHALLENGE_HASH_LSW    19
-#define SIM_CMD_CHALLENGE_HASH_MSW    20
-#define SIM_CMD_CHALLENGE_RESULT      21
+#define SIM_CMD_CHALLENGE_HASH    19
+#define SIM_CMD_CHALLENGE_RESULT  20
 
 #define SIM_OPT_INSTRUMENT_DETAILED    0
 #define SIM_OPT_INSTRUMENT_WARMUP      1
@@ -143,8 +142,7 @@
 #define SimCheckAttestation()     SimMagic0(SIM_CMD_CHECK_ATTESTATION)
 #define SimCheckAttestationTurn() SimMagic0(SIM_CMD_ATTESTATION_TURN)
 #define SimGetChallengeId()       SimMagic0(SIM_CMD_CHALLENGE_ID)
-#define SimGetChallengeHashLSW()     SimMagic0(SIM_CMD_CHALLENGE_HASH_LSW)
-#define SimGetChallengeHashMSW()     SimMagic0(SIM_CMD_CHALLENGE_HASH_MSW)
+#define SimGetChallengeHash(arg0)     SimMagic1(SIM_CMD_CHALLENGE_HASH, arg0)
 #define SimSendChallengeResult(arg0, arg1)     SimMagic2(SIM_CMD_CHALLENGE_RESULT, arg0, arg1)
 
 #endif /* __SIM_API */

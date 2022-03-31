@@ -14,10 +14,8 @@ public:
     void setChallengeHash(UInt128 challenge_hash) { m_challenge_hash = challenge_hash; }
     UInt16 getChallengeId() const {return m_challenge_id; }
     UInt128 getChallengeHash() const {return m_challenge_hash; }
-    bool verifyChallenge(UInt128 challenge_result);
     void printHash();
     void printChallengeId();
-    bool m_marked_for_delete = false;
 
 private:
     

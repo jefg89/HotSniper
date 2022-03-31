@@ -6,6 +6,7 @@ using namespace std;
 
 DevUnderAttestation::DevUnderAttestation(thread_id_t thread_id) {
     m_thread_id = thread_id; 
+    m_challenge_hash = 0;
     //TODO: initialize stuff here
 }
 DevUnderAttestation::~DevUnderAttestation() {
@@ -15,23 +16,9 @@ DevUnderAttestation::~DevUnderAttestation() {
 void DevUnderAttestation::printHash() {
     long int MSB = m_challenge_hash >> 64;
     long int LSB = ((m_challenge_hash << 64) >> 64);
-     cout<<"[Attestation Manager] [DUA/"<< m_thread_id <<"]:" <<" Seed Hash = 0x" << setfill('0') << setw(16) << right << hex << MSB << setfill('0') << setw(16) << right << hex << LSB <<endl;
-}
-
-bool DevUnderAttestation::verifyChallenge(UInt128 challenge_result) {
-    //TODO: perform some calculations here to verify that the input challenge result
-    //corresponds with the stored hash and challege id.
-    //This returns true for now
-    
-    long int MSB = challenge_result >> 64;
-    long int LSB = ((challenge_result << 64) >> 64);
-    cout<<"[Attestation Manager] [DUA/"<< m_thread_id <<"]:" << " Received Hash = 0x" << setfill('0') << setw(16) << right << hex << MSB << setfill('0') << setw(16) << right << hex << LSB <<endl;
-    //Do not forget to clean stuff
-    m_challenge_hash = 0;
-    m_challenge_id = 0;
-    return true;
+     cout<<"[Trusted HW Platform] [Thread/"<< m_thread_id <<"]:" <<" Seed Hash = 0x" << setfill('0') << setw(16) << right << hex << MSB << setfill('0') << setw(16) << right << hex << LSB <<endl;
 }
 
 void DevUnderAttestation::printChallengeId() {
-    cout<<"[Attestation Manager] [DUA/"<< m_thread_id <<"]:" << " Challenge ID = 0x" << m_challenge_id <<endl;
+    cout<<"[Trusted HW Platform] [Thread/"<< m_thread_id <<"]:" << " Challenge ID = 0x" << m_challenge_id <<endl;
 }
