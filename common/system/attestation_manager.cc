@@ -33,6 +33,12 @@ UInt64 AttestationManager::getChallengeHash(thread_id_t thread_id, UInt8 word){
     switch (word){
         case LSW:
             returnHash = (challengeHash << 64) >> 64;
+            // After getting the hash, we unset the flag for this thread
+            // as the attestation verification will be done asynchronously
+            // through the hardware platform
+            unsetAttestation(thread_id);
+            // remove the thread for the current turn queue;
+            m_curr_attest_turn.pop();
             break;
         case MSW:
             returnHash = challengeHash >> 64;
@@ -41,12 +47,7 @@ UInt64 AttestationManager::getChallengeHash(thread_id_t thread_id, UInt8 word){
             returnHash = (challengeHash << 64) >> 64;
             break;
     }
-    // After getting the hash, we unset the flag for this thread
-    // as the attestation verification will be done asynchronously
-    // by the hardware platform
-    unsetAttestation(thread_id);
-    // remove the thread for the current turn queue;
-    m_curr_attest_turn.pop();
+
     return returnHash;
 }
 
@@ -55,7 +56,8 @@ UInt16  AttestationManager::getChallengeId(thread_id_t thread_id){
 }
 
 bool AttestationManager::checkChallengeResult(thread_id_t thread_id, UInt128 challenge_result) {
-    // The verification is done by the Trusted Hardware Platform.
+    // TODO: The verification should be done by the magical "verifier"
+    // through the trusted platform
     return trustedHwPlatform->checkChallengeResult(thread_id, challenge_result);
 
 }
@@ -82,14 +84,5 @@ void AttestationManager::unsetAttestation(thread_id_t thread_id) {
 }
 
 bool AttestationManager::checkAllFinished() {
-    cout << "Currently on top " <<std::dec <<m_curr_attest_turn.front() << "empty? = " << m_curr_attest_turn.empty() <<endl;
     return m_curr_attest_turn.empty();
 }
-
-// void AttestationManager::sequencer() {
-//     for (size_t i = 0; i < m_curr_attest_threads.size(); i++){
-//         trustedHwPlatform->getChallengeId(m_curr_attest_threads.at(i));
-//         trustedHwPlatform->getChallengeHash(m_curr_attest_threads.at(i));
-//     }
-    
-// }

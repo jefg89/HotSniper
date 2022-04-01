@@ -58,7 +58,7 @@ ShmemPerfModel::incrElapsedTime(SubsecondTime time, Thread_t thread_num)
          "t_elapsed_time(%s) < i_elapsed_time(%s)",
          itostr(t_elapsed_time).c_str(),
          itostr(i_elapsed_time).c_str());
-
+   //TODO: CHECK THIS HERE - Jef
    atomic_add_subsecondtime(m_elapsed_time[thread_num], time);
 }
 
