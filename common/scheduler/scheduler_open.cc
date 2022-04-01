@@ -1301,9 +1301,7 @@ void SchedulerOpen::executeAttestationPolicy() {
 	for (size_t i = 0; i < candidates.size(); i++){
 		 thread_id_t thread = systemCores.at(candidates.at(i)).assignedThreadID;
 		 Sim()->getAttestationManager()->setAttestation(thread);
-	}
-	
-	//TODO: perform actual attestation through Attestation Manager
+	}	
 }
 
 

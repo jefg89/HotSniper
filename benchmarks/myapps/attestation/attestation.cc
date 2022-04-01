@@ -9,7 +9,7 @@
 #include "sim_api.h"
 #include <execinfo.h>
 
-#define DEBUG 0
+#define DEBUG 1
 #define ATTACKER 0
 #define SAMPLES 1024
 #define CHARS 1024
@@ -135,6 +135,12 @@ int mainLoop(int iter) {
                 cout<<"ERROR: Attestation FAILED"<<endl;
                 exit(EXIT_FAILURE);
             }
+        //Then wait for all the applications to finish 
+        //their attestation computation
+        while(!SimCheckAllFinished());
+        if (DEBUG)
+            cout << "All applications have finished their attestation computation" <<endl;
+            
         }
         SimRoiEnd();
     }

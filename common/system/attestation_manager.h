@@ -31,6 +31,8 @@ public:
     bool checkChallengeResult(thread_id_t thread_id, UInt128 challenge_result);
     bool checkUnderAttestation(thread_id_t thread_id);
     bool checkAttestationTurn(thread_id_t thread_id);
+    bool checkAllFinished();
+    // void sequencer();
     
 
     

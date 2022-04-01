@@ -41,6 +41,12 @@ UInt64 AttestationManager::getChallengeHash(thread_id_t thread_id, UInt8 word){
             returnHash = (challengeHash << 64) >> 64;
             break;
     }
+    // After getting the hash, we unset the flag for this thread
+    // as the attestation verification will be done asynchronously
+    // by the hardware platform
+    unsetAttestation(thread_id);
+    // remove the thread for the current turn queue;
+    m_curr_attest_turn.pop();
     return returnHash;
 }
 
@@ -50,10 +56,6 @@ UInt16  AttestationManager::getChallengeId(thread_id_t thread_id){
 
 bool AttestationManager::checkChallengeResult(thread_id_t thread_id, UInt128 challenge_result) {
     // The verification is done by the Trusted Hardware Platform.
-    // unsets the attestation flag for the thread;
-    unsetAttestation(thread_id);
-    // remove the thread for the current turn queue;
-    m_curr_attest_turn.pop();
     return trustedHwPlatform->checkChallengeResult(thread_id, challenge_result);
 
 }
@@ -78,3 +80,16 @@ void AttestationManager::unsetAttestation(thread_id_t thread_id) {
             ++iter;
     }
 }
+
+bool AttestationManager::checkAllFinished() {
+    cout << "Currently on top " <<std::dec <<m_curr_attest_turn.front() << "empty? = " << m_curr_attest_turn.empty() <<endl;
+    return m_curr_attest_turn.empty();
+}
+
+// void AttestationManager::sequencer() {
+//     for (size_t i = 0; i < m_curr_attest_threads.size(); i++){
+//         trustedHwPlatform->getChallengeId(m_curr_attest_threads.at(i));
+//         trustedHwPlatform->getChallengeHash(m_curr_attest_threads.at(i));
+//     }
+    
+// }

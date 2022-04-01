@@ -73,6 +73,10 @@ UInt64 handleMagicInstruction(thread_id_t thread_id, UInt64 cmd, UInt64 arg0, UI
       UInt128 result = (static_cast<UInt128>(arg0) << 64) | (static_cast<UInt128>(arg1));
       return Sim()->getAttestationManager()->checkChallengeResult(thread_id, result);
    }
+   case SIM_CMD_ALL_FINISHED:
+   {
+      return Sim()->getAttestationManager()->checkAllFinished();
+   }
    default:
       LOG_PRINT_WARNING_ONCE("Encountered unknown magic instruction cmd(%u)", cmd);
       return 1;
