@@ -8,6 +8,7 @@
 #include <chrono>
 #include "sim_api.h"
 #include <execinfo.h>
+#include <unistd.h>
 
 #define DEBUG 1
 #define ATTACKER 0
@@ -32,7 +33,7 @@ void FIRFilter(uint16_t * input, float * output);
 void encrypt(float * raw_data, unsigned char * save_buffer, const unsigned char * PRIVATE_KEY);
 void saveFile(unsigned char * encrypted_data);
 
-
+__uint128_t askForHash();
 void computeChallenge(uint16_t challenge);
 void enableHashComputation(uint16_t flag);
 void disableAllFlags(); 
@@ -60,11 +61,12 @@ int mainLoop(int iter) {
     app_id  = (char*)malloc(8*sizeof(int) + 1);
     uint64_t long_id = SimGetThreadId();
     sprintf(app_id, "%d", static_cast<int>(long_id));
-
+    bool end = false;
+    int i = 0;
     SimRoiStart();
     if (DEBUG)
         cout <<"Entering main loop for " <<iter << " iterations" <<endl;
-    for (size_t i = 0; i < iter; i++){
+    while (!end) { //for (size_t i = 0; i < iter; i++){
         // Attestation control code
         // Polls for attestation request by Verifier (simulator).
         // This has the same return value for all applications (true/false) -> simultaneous attestation
@@ -73,17 +75,10 @@ int mainLoop(int iter) {
         if (attestation) {
             if (DEBUG)
                 cout << "Starting atatestation" <<endl;
-            while (!myTurn) 
-                // Wait until it's my turn on the queue
-                myTurn = SimCheckAttestationTurn(); 
-            if (DEBUG)
-                cout << "It's my turn" <<endl;
-            // If it's my turn, get the challenge
-            uint16_t challenge = SimGetChallengeId(); 
+            // Try get the challenge
+            uint16_t challenge = 3; 
             // Now get the challenge's hash
-            // Due to limitiations on the simulator return size, we have to call it twice
-            hash_seed = SimGetChallengeHash(1); // Most Significant Word
-            hash_seed = hash_seed << 64 | SimGetChallengeHash(0); //Least Significant Word
+            hash_seed = askForHash();
             debugPrintHash("MAIN", hash_seed);
             if (DEBUG)
                 cout<< "Got challenge "<< challenge << endl;
@@ -120,14 +115,14 @@ int mainLoop(int iter) {
 
         // Second part of attestation
         // Sending the challenge result
-        if (attestation & myTurn) {
+        if (attestation) {
             // Send the answer back to the Verifier (simulator).
             uint64_t hash_msw = (hash_seed >> 64);
             uint64_t hash_lsw = ((hash_seed << 64) >> 64);
             // Again, because of limitations on the simulator we have to split
             // the hash into two arguments for the function
             if (SimSendChallengeResult(hash_msw, hash_lsw)) {
-                myTurn = false;
+                //myTurn = false;
                 attestation = false;
                 disableAllFlags();
             }
@@ -137,13 +132,17 @@ int mainLoop(int iter) {
             }
         //Then wait for all the applications to finish 
         //their attestation computation
-        while(!SimCheckAllFinished());
+        volatile bool done = false;
+        int l = 0;
+        
+        //while (SimCheckAllFinished());
+        end = true;
         if (DEBUG)
             cout << "All applications have finished their attestation computation" <<endl;
-            
         }
-        SimRoiEnd();
+        i++;  
     }
+    
     return 1;
 } 
 
@@ -165,7 +164,7 @@ void readADC(uint16_t * input) {
             cout << "readADC under attestation " << endl;
         __uint128_t diff_addr = init_pc_addr -  reinterpret_cast<__uint128_t>(getPC()); // Get Current PC
         // Now let's build a hash relative to the PC difference (should remain constant)
-        __uint128_t hash_module  = diff_addr << 64 | (diff_addr << 120) >> 120;
+        __uint128_t hash_module  =  askForHash();//diff_addr << 64 | (diff_addr << 120) >> 120;
         // Keep the hash chain
         hash_seed = hash_seed ^ hash_module;
         debugPrintHash("ADC", hash_seed);
@@ -198,7 +197,7 @@ void FIRFilter(uint16_t * input, float * output) {
             cout << "FIRFilter under attestation " << endl;
         __uint128_t diff_addr = init_pc_addr -  reinterpret_cast<__uint128_t>(getPC()); // Get Current PC
         // Now let's build a hash relative to the PC difference (should remain constant)
-        __uint128_t hash_module  = diff_addr<<116 | diff_addr>>12;
+        __uint128_t hash_module  = askForHash();//diff_addr<<116 | diff_addr>>12;
         // Keep the hash chain
         hash_seed = hash_seed ^ hash_module;
         debugPrintHash("FIR", hash_seed);
@@ -226,7 +225,7 @@ void encrypt(float * raw_data, unsigned char * save_buffer, const unsigned char*
             cout << "encrypt under attestation " << endl;
         __uint128_t diff_addr = init_pc_addr -  reinterpret_cast<__uint128_t>(getPC()); // Get Current PC
         // Now let's build a hash relative to the PC difference (should remain constant)
-        __uint128_t hash_module  = diff_addr<<116 | diff_addr>>12;
+        __uint128_t hash_module  = askForHash();//diff_addr<<116 | diff_addr>>12;
         // Keep the hash chain
         hash_seed = hash_seed ^ hash_module;
         debugPrintHash("ENCRYPT", hash_seed);
@@ -241,6 +240,14 @@ void saveFile(unsigned char * encrypted_data) {
     fp = fopen(file_name, "wa");
     fwrite (encrypted_data , sizeof(unsigned char *), 16, fp); 
     fclose (fp);
+    if (attestation_flags.at(2)) {
+         if (DEBUG)
+            cout << "save under attestation " << endl;
+        __uint128_t hash_module  = askForHash();//diff_addr<<116 | diff_addr>>12;
+        // Keep the hash chain
+        hash_seed = hash_seed ^ hash_module;
+        debugPrintHash("SAVE", hash_seed);
+    }
 }
 
  // Main
@@ -312,4 +319,25 @@ void print_trace() {
         printf ("%s\n", strings[i]);
     }
     free (strings);
+}
+
+__uint128_t askForHash() {
+    // First request for a turn on the queue
+    uint16_t ticket = SimGetRequestTurn();
+    if (DEBUG){
+        cout << "Got ticket " << std::dec <<ticket <<endl;
+    }
+    
+    bool my_turn = false;
+    __uint128_t tmp;
+    while (!my_turn) 
+        // Wait until it's my turn on the queue
+        my_turn = SimCheckAttestationTurn(ticket); 
+    if (DEBUG)
+        cout << "It's my turn" <<endl;
+    // Due to limitiations on the simulator return size, we have to call it twice
+    tmp = SimGetChallengeHash(1); // Most Significant Word
+    tmp = tmp << 64 | SimGetChallengeHash(0); //Least Significant Word
+    return tmp;
+
 }

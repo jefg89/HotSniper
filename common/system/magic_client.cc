@@ -58,11 +58,11 @@ UInt64 handleMagicInstruction(thread_id_t thread_id, UInt64 cmd, UInt64 arg0, UI
    }
    case SIM_CMD_ATTESTATION_TURN:
    {
-      return  Sim()->getAttestationManager()->checkAttestationTurn(thread_id);
+      return  Sim()->getAttestationManager()->checkAttestationTurn(arg0);
    }
-   case SIM_CMD_CHALLENGE_ID:
+   case SIM_CMD_REQUEST_TURN:
    {
-      return Sim()->getAttestationManager()->getChallengeId(thread_id);
+      return Sim()->getAttestationManager()->requestTurn(thread_id);
    }
    case SIM_CMD_CHALLENGE_HASH:
    {

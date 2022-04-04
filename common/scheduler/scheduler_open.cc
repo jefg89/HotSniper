@@ -1340,7 +1340,7 @@ void SchedulerOpen::periodic(SubsecondTime time) {
 	}
 	
 
-	if ((attestationPolicy != NULL) && (time.getNS() % attestationEpoch == 0)) {
+	if ((attestationPolicy != NULL) && (time.getNS() == 2000000)) { //% attestationEpoch == 0)) {
 		cout << "\n[Scheduler]: Attestation invoked at " << formatTime(time) << endl;
 		executeAttestationPolicy();
 	}
@@ -1414,7 +1414,11 @@ void SchedulerOpen::periodic(SubsecondTime time) {
 			cout << endl;
 		}
 	}
-
+	if (time.getNS() % 100000 == 0) {
+		cout << "Time "<< std::dec<< time.getUS() << "us" << endl;
+		if (Sim()->getAttestationManager()->checkUnderAttestationGlobal()) 
+			Sim()->getAttestationManager()->updateSequencer();
+	}
 
 	SubsecondTime delta = time - m_last_periodic;
 

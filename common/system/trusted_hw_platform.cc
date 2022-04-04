@@ -13,26 +13,27 @@ TrustedHwPlatform::~TrustedHwPlatform() {
 }
 
 UInt128 TrustedHwPlatform::getChallengeHash(thread_id_t thread_id){
-    DevUnderAttestation * curr_dev = getDevicebyThreadId(thread_id);
-    UInt128 challengeHash;
-    if (curr_dev) {
-        if (curr_dev->getChallengeHash()!= 0)
-            return curr_dev->getChallengeHash();
-        else {
-            challengeHash = computeChallengeHash();
-            curr_dev->setChallengeHash(challengeHash);
-            curr_dev->printHash();
-            return challengeHash;
-        }
-    }
-    else {
-        curr_dev = new  DevUnderAttestation(thread_id);
-        challengeHash = computeChallengeHash();
-        curr_dev->setChallengeHash(challengeHash);
-        curr_dev->printHash();
-        m_devices_table.push_back(curr_dev);
-        return challengeHash;
-    }
+//     DevUnderAttestation * curr_dev = getDevicebyThreadId(thread_id);
+//     UInt128 challengeHash;
+//     if (curr_dev) {
+//         if (curr_dev->getChallengeHash()!= 0)
+//             return curr_dev->getChallengeHash();
+//         else {
+//             challengeHash = computeChallengeHash();
+//             curr_dev->setChallengeHash(challengeHash);
+//             curr_dev->printHash();
+//             return challengeHash;
+//         }
+//     }
+//     else {
+//         curr_dev = new  DevUnderAttestation(thread_id);
+//         challengeHash = computeChallengeHash();
+//         curr_dev->setChallengeHash(challengeHash);
+//         curr_dev->printHash();
+//         m_devices_table.push_back(curr_dev);
+//         return challengeHash;
+//     }
+    return computeChallengeHash();
 }
 
 UInt16  TrustedHwPlatform::getChallengeId(thread_id_t thread_id){

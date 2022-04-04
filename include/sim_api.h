@@ -20,7 +20,7 @@
 #define SIM_CMD_SET_SECURE      15
 #define SIM_CMD_CHECK_ATTESTATION 16
 #define SIM_CMD_ATTESTATION_TURN  17
-#define SIM_CMD_CHALLENGE_ID      18
+#define SIM_CMD_REQUEST_TURN      18
 #define SIM_CMD_CHALLENGE_HASH    19
 #define SIM_CMD_CHALLENGE_RESULT  20
 #define SIM_CMD_ALL_FINISHED      21
@@ -141,8 +141,8 @@
 #define SimSetInstrumentMode(opt) SimMagic1(SIM_CMD_INSTRUMENT_MODE, opt)
 #define SimInSimulator()          (SimMagic0(SIM_CMD_IN_SIMULATOR)!=SIM_CMD_IN_SIMULATOR)
 #define SimCheckAttestation()     SimMagic0(SIM_CMD_CHECK_ATTESTATION)
-#define SimCheckAttestationTurn() SimMagic0(SIM_CMD_ATTESTATION_TURN)
-#define SimGetChallengeId()       SimMagic0(SIM_CMD_CHALLENGE_ID)
+#define SimCheckAttestationTurn(arg0) SimMagic1(SIM_CMD_ATTESTATION_TURN, arg0)
+#define SimGetRequestTurn()       SimMagic0(SIM_CMD_REQUEST_TURN)
 #define SimGetChallengeHash(arg0)     SimMagic1(SIM_CMD_CHALLENGE_HASH, arg0)
 #define SimSendChallengeResult(arg0, arg1)     SimMagic2(SIM_CMD_CHALLENGE_RESULT, arg0, arg1)
 #define SimCheckAllFinished()     SimMagic0(SIM_CMD_ALL_FINISHED)

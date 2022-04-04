@@ -3,14 +3,18 @@
 #include <algorithm>
 #include <numeric>
 #include <list>
+#include <unistd.h>
+
+
 
 using namespace std;
 
-#define MSW 1
-#define LSW 0
+
 
 AttestationManager::AttestationManager() {
     trustedHwPlatform = new TrustedHwPlatform;
+    //TODO: read from file
+    // seq_latency = new ComponentLatency(&seq_period, 1); //50000
 }
 AttestationManager::~AttestationManager() {
     delete(trustedHwPlatform);
@@ -19,7 +23,6 @@ AttestationManager::~AttestationManager() {
 void AttestationManager::setAttestation(thread_id_t thread_id){
     cout <<"[Attestation Manager]: Setting Attestation for Thread " << thread_id <<endl;
     m_curr_attest_threads.push_back(thread_id);
-    m_curr_attest_turn.push(thread_id);
 }
 
 // This method needs to be called twice for a single Hash
@@ -33,12 +36,6 @@ UInt64 AttestationManager::getChallengeHash(thread_id_t thread_id, UInt8 word){
     switch (word){
         case LSW:
             returnHash = (challengeHash << 64) >> 64;
-            // After getting the hash, we unset the flag for this thread
-            // as the attestation verification will be done asynchronously
-            // through the hardware platform
-            unsetAttestation(thread_id);
-            // remove the thread for the current turn queue;
-            m_curr_attest_turn.pop();
             break;
         case MSW:
             returnHash = challengeHash >> 64;
@@ -51,13 +48,16 @@ UInt64 AttestationManager::getChallengeHash(thread_id_t thread_id, UInt8 word){
     return returnHash;
 }
 
-UInt16  AttestationManager::getChallengeId(thread_id_t thread_id){
-    return trustedHwPlatform->getChallengeId(thread_id);
+UInt16  AttestationManager::requestTurn(thread_id_t thread_id){
+    TICKETS--;
+    m_curr_attest_turn.push(static_cast<thread_id_t>(TICKETS));
+    return TICKETS;
 }
 
 bool AttestationManager::checkChallengeResult(thread_id_t thread_id, UInt128 challenge_result) {
     // TODO: The verification should be done by the magical "verifier"
     // through the trusted platform
+    unsetAttestation(thread_id);
     return trustedHwPlatform->checkChallengeResult(thread_id, challenge_result);
 
 }
@@ -70,8 +70,8 @@ bool AttestationManager::checkUnderAttestation(thread_id_t thread_id) {
     return false;
 }
 
-bool AttestationManager::checkAttestationTurn(thread_id_t thread_id) {
-    return (m_curr_attest_turn.front() == thread_id);
+bool AttestationManager::checkAttestationTurn(UInt16 ticket) {
+    return (m_curr_attest_turn.front() == ticket);
 }
 
 void AttestationManager::unsetAttestation(thread_id_t thread_id) {
@@ -85,4 +85,14 @@ void AttestationManager::unsetAttestation(thread_id_t thread_id) {
 
 bool AttestationManager::checkAllFinished() {
     return m_curr_attest_turn.empty();
+}
+void AttestationManager::updateSequencer() {
+    if (!m_curr_attest_turn.empty()) {
+        cout << "[SEQUENCER]: Serving ticket " << std::dec <<m_curr_attest_turn.front() <<endl;
+        m_curr_attest_turn.pop();
+    }
+}
+
+bool AttestationManager::checkUnderAttestationGlobal() {
+    return (!m_curr_attest_threads.empty());
 }
