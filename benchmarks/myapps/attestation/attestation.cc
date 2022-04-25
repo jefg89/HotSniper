@@ -1,3 +1,7 @@
+#if !defined(_GNU_SOURCE)
+#define _GNU_SOURCE
+#endif // _GNU_SOURCE
+
 #include <openssl/aes.h>
 #include <iostream>
 #include <iomanip>
@@ -9,6 +13,9 @@
 #include "sim_api.h"
 #include <execinfo.h>
 #include <unistd.h>
+#include "blake2.h"
+
+#define OUTBYTES 64
 
 #define DEBUG 1
 #define ATTACKER 0
@@ -22,7 +29,8 @@ using namespace std;
 std::random_device rd;  
 std::mt19937 gen(rd());
 std::vector<bool> attestation_flags = {false, false, false};
-__uint128_t hash_seed;
+//__uint128_t hash_seed;
+unsigned char * hash_seed;
 char * app_id;
 
 // Vulnerable buffer
@@ -38,12 +46,249 @@ void computeChallenge(uint16_t challenge);
 void enableHashComputation(uint16_t flag);
 void disableAllFlags(); 
 
-void debugPrintHash(const char * module,__uint128_t hash);
+void debugPrintHash(const char * module,unsigned char * hash);
 
 __attribute__ ((__noinline__))
 void * getPC () { return __builtin_return_address(0); }
 
-void print_trace();
+
+//Blake2 functions
+/* This will help compatibility with coreutils */
+int blake2s_stream( FILE *stream, void *resstream, size_t outbytes )
+{
+  int ret = -1;
+  size_t sum, n;
+  blake2s_state S[1];
+  static const size_t buffer_length = 32768;
+  uint8_t *buffer = ( uint8_t * )malloc( buffer_length );
+
+  if( !buffer ) return -1;
+
+  blake2s_init( S, outbytes );
+
+  while( 1 )
+  {
+    sum = 0;
+
+    while( 1 )
+    {
+      n = fread( buffer + sum, 1, buffer_length - sum, stream );
+      sum += n;
+
+      if( buffer_length == sum )
+        break;
+
+      if( 0 == n )
+      {
+        if( ferror( stream ) )
+          goto cleanup_buffer;
+
+        goto final_process;
+      }
+
+      if( feof( stream ) )
+        goto final_process;
+    }
+
+    blake2s_update( S, buffer, buffer_length );
+  }
+
+final_process:;
+
+  if( sum > 0 ) blake2s_update( S, buffer, sum );
+
+  blake2s_final( S, resstream, outbytes );
+  ret = 0;
+cleanup_buffer:
+  free( buffer );
+  return ret;
+}
+
+int blake2b_stream( FILE *stream, void *resstream, size_t outbytes )
+{
+  int ret = -1;
+  size_t sum, n;
+  blake2b_state S[1];
+  static const size_t buffer_length = 32768;
+  uint8_t *buffer = ( uint8_t * )malloc( buffer_length );
+
+  if( !buffer ) return -1;
+
+  blake2b_init( S, outbytes );
+
+  while( 1 )
+  {
+    sum = 0;
+
+    while( 1 )
+    {
+      n = fread( buffer + sum, 1, buffer_length - sum, stream );
+      sum += n;
+
+      if( buffer_length == sum )
+        break;
+
+      if( 0 == n )
+      {
+        if( ferror( stream ) )
+          goto cleanup_buffer;
+
+        goto final_process;
+      }
+
+      if( feof( stream ) )
+        goto final_process;
+    }
+
+    blake2b_update( S, buffer, buffer_length );
+  }
+
+final_process:;
+
+  if( sum > 0 ) blake2b_update( S, buffer, sum );
+
+  blake2b_final( S, resstream, outbytes );
+  ret = 0;
+cleanup_buffer:
+  free( buffer );
+  return ret;
+}
+
+int blake2sp_stream( FILE *stream, void *resstream, size_t outbytes )
+{
+  int ret = -1;
+  size_t sum, n;
+  blake2sp_state S[1];
+  static const size_t buffer_length = 16 * ( 1UL << 20 );
+  uint8_t *buffer = ( uint8_t * )malloc( buffer_length );
+
+  if( !buffer ) return -1;
+
+  blake2sp_init( S, outbytes );
+
+  while( 1 )
+  {
+    sum = 0;
+
+    while( 1 )
+    {
+      n = fread( buffer + sum, 1, buffer_length - sum, stream );
+      sum += n;
+
+      if( buffer_length == sum )
+        break;
+
+      if( 0 == n )
+      {
+        if( ferror( stream ) )
+          goto cleanup_buffer;
+
+        goto final_process;
+      }
+
+      if( feof( stream ) )
+        goto final_process;
+    }
+
+    blake2sp_update( S, buffer, buffer_length );
+  }
+
+final_process:;
+
+  if( sum > 0 ) blake2sp_update( S, buffer, sum );
+
+  blake2sp_final( S, resstream, outbytes );
+  ret = 0;
+cleanup_buffer:
+  free( buffer );
+  return ret;
+}
+
+
+int blake2bp_stream( FILE *stream, void *resstream, size_t outbytes )
+{
+  int ret = -1;
+  size_t sum, n;
+  blake2bp_state S[1];
+  static const size_t buffer_length = 16 * ( 1UL << 20 );
+  uint8_t *buffer = ( uint8_t * )malloc( buffer_length );
+
+  if( !buffer ) return -1;
+
+  blake2bp_init( S, outbytes );
+
+  while( 1 )
+  {
+    sum = 0;
+
+    while( 1 )
+    {
+      n = fread( buffer + sum, 1, buffer_length - sum, stream );
+      sum += n;
+
+      if( buffer_length == sum )
+        break;
+
+      if( 0 == n )
+      {
+        if( ferror( stream ) )
+          goto cleanup_buffer;
+
+        goto final_process;
+      }
+
+      if( feof( stream ) )
+        goto final_process;
+    }
+
+    blake2bp_update( S, buffer, buffer_length );
+  }
+
+final_process:;
+
+  if( sum > 0 ) blake2bp_update( S, buffer, sum );
+
+  blake2bp_final( S, resstream, outbytes );
+  ret = 0;
+cleanup_buffer:
+  free( buffer );
+  return ret;
+}
+
+typedef int ( *blake2fn )( FILE *, void *, size_t );
+
+void blake2_api(unsigned char *input, unsigned char * output ){
+    blake2fn blake2_stream = blake2b_stream;
+    unsigned long maxbytes = BLAKE2B_OUTBYTES;
+    const char *algorithm = "BLAKE2b";
+    unsigned long outbytes = 0;
+    bool bsdstyle = false;
+    int c, i;
+    opterr = 1;
+
+    if(outbytes > maxbytes){
+        printf( "Invalid length argument: %lu\n", outbytes * 8 );
+        printf( "Maximum digest length for %s is %lu\n", algorithm, maxbytes * 8 );
+    }
+    else if( outbytes == 0 )
+        outbytes = maxbytes;
+
+    FILE *f = NULL;
+
+    unsigned char * input_hash = (unsigned char*) malloc(maxbytes *sizeof(unsigned char));
+    input_hash = input;
+    f = fmemopen(input_hash, maxbytes * sizeof(unsigned char), "r");
+
+
+    if( blake2_stream( f, output, outbytes ) < 0 ){
+        printf("Failed to hash argument \n");
+        exit(EXIT_FAILURE);
+    }
+    if(f != stdin) fclose( f );
+}
+
+
+
 
 // Initialization method
 // Entry point for the program
@@ -53,6 +298,7 @@ void mainSetup() {
     // setInts();
     // setKey(seed);
     save_buffer = (unsigned char *) malloc(16*sizeof (unsigned char));
+    hash_seed = (unsigned char *) malloc(OUTBYTES*sizeof(unsigned char));
     cout << "Entering setup" << endl;
 }
 
@@ -66,25 +312,28 @@ int mainLoop(int iter) {
     SimRoiStart();
     if (DEBUG)
         cout <<"Entering main loop for " <<iter << " iterations" <<endl;
-    while (!end) { //for (size_t i = 0; i < iter; i++){
+    //while (!end) { //
+    //for (size_t i = 0; i < iter; i++){
         // Attestation control code
         // Polls for attestation request by Verifier (simulator).
         // This has the same return value for all applications (true/false) -> simultaneous attestation
-        bool attestation = SimCheckAttestation();
+        bool attestation =  false;//SimCheckAttestation();
         bool myTurn = false;
         if (attestation) {
             if (DEBUG)
                 cout << "Starting atatestation" <<endl;
             // Try get the challenge
             uint16_t challenge = 3; 
-            // Now get the challenge's hash
-            hash_seed = askForHash();
-            debugPrintHash("MAIN", hash_seed);
-            if (DEBUG)
-                cout<< "Got challenge "<< challenge << endl;
             // The compute challenge method just enables specific hash calculations
             // according to the received hash id.
             computeChallenge(challenge);
+            if(attestation_flags.at(0)) {
+                //hash_seed = askForHash();
+                blake2_api(reinterpret_cast<unsigned char*>(app_id), hash_seed);
+                debugPrintHash("MAIN", hash_seed);
+                if (DEBUG)
+                    cout<< "Got challenge "<< challenge << endl;
+            }
         }
         // END of Attestation control code
 
@@ -113,35 +362,45 @@ int mainLoop(int iter) {
         saving_:
             saveFile(save_buffer);
 
+
+
+
+        for (size_t i = 0 ; i < iter; i++){
+            printf("%d \n", i);
+            if (attestation) {
+                blake2_api(hash_seed, hash_seed);
+                if (DEBUG)
+                    debugPrintHash("NODES", hash_seed);
+            }
+        }
+        
         // Second part of attestation
         // Sending the challenge result
         if (attestation) {
             // Send the answer back to the Verifier (simulator).
-            uint64_t hash_msw = (hash_seed >> 64);
-            uint64_t hash_lsw = ((hash_seed << 64) >> 64);
+            // uint64_t hash_msw = (hash_seed >> 64);
+            // uint64_t hash_lsw = ((hash_seed << 64) >> 64);
             // Again, because of limitations on the simulator we have to split
             // the hash into two arguments for the function
-            if (SimSendChallengeResult(hash_msw, hash_lsw)) {
+            //if (SimSendChallengeResult(hash_msw, hash_lsw)) {
+        //    if (SimSendChallengeResult(0, 0)) {
                 //myTurn = false;
                 attestation = false;
                 disableAllFlags();
-            }
-            else {
-                cout<<"ERROR: Attestation FAILED"<<endl;
-                exit(EXIT_FAILURE);
-            }
+            //}
+            //else {
+            //    cout<<"ERROR: Attestation FAILED"<<endl;
+            //    exit(EXIT_FAILURE);
+            //}
         //Then wait for all the applications to finish 
         //their attestation computation
-        volatile bool done = false;
-        int l = 0;
-        
         //while (SimCheckAllFinished());
-        end = true;
+        //end = true;
         if (DEBUG)
             cout << "All applications have finished their attestation computation" <<endl;
         }
-        i++;  
-    }
+        //i++;  
+    //}
     
     return 1;
 } 
@@ -164,9 +423,10 @@ void readADC(uint16_t * input) {
             cout << "readADC under attestation " << endl;
         __uint128_t diff_addr = init_pc_addr -  reinterpret_cast<__uint128_t>(getPC()); // Get Current PC
         // Now let's build a hash relative to the PC difference (should remain constant)
-        __uint128_t hash_module  =  askForHash();//diff_addr << 64 | (diff_addr << 120) >> 120;
+        //__uint128_t hash_module  =  askForHash();//diff_addr << 64 | (diff_addr << 120) >> 120;
+        blake2_api(hash_seed, hash_seed);
         // Keep the hash chain
-        hash_seed = hash_seed ^ hash_module;
+        //hash_seed = hash_seed ^ hash_module;
         debugPrintHash("ADC", hash_seed);
     }
 }
@@ -197,9 +457,10 @@ void FIRFilter(uint16_t * input, float * output) {
             cout << "FIRFilter under attestation " << endl;
         __uint128_t diff_addr = init_pc_addr -  reinterpret_cast<__uint128_t>(getPC()); // Get Current PC
         // Now let's build a hash relative to the PC difference (should remain constant)
-        __uint128_t hash_module  = askForHash();//diff_addr<<116 | diff_addr>>12;
+        //__uint128_t hash_module  = askForHash();//diff_addr<<116 | diff_addr>>12;
         // Keep the hash chain
-        hash_seed = hash_seed ^ hash_module;
+        //hash_seed = hash_seed ^ hash_module;
+        blake2_api(hash_seed, hash_seed);
         debugPrintHash("FIR", hash_seed);
     }
 }
@@ -225,9 +486,10 @@ void encrypt(float * raw_data, unsigned char * save_buffer, const unsigned char*
             cout << "encrypt under attestation " << endl;
         __uint128_t diff_addr = init_pc_addr -  reinterpret_cast<__uint128_t>(getPC()); // Get Current PC
         // Now let's build a hash relative to the PC difference (should remain constant)
-        __uint128_t hash_module  = askForHash();//diff_addr<<116 | diff_addr>>12;
+        //__uint128_t hash_module  = askForHash();//diff_addr<<116 | diff_addr>>12;
         // Keep the hash chain
-        hash_seed = hash_seed ^ hash_module;
+        //hash_seed = hash_seed ^ hash_module;
+        blake2_api(hash_seed, hash_seed);
         debugPrintHash("ENCRYPT", hash_seed);
     }
 }
@@ -243,9 +505,10 @@ void saveFile(unsigned char * encrypted_data) {
     if (attestation_flags.at(2)) {
          if (DEBUG)
             cout << "save under attestation " << endl;
-        __uint128_t hash_module  = askForHash();//diff_addr<<116 | diff_addr>>12;
+        //__uint128_t hash_module  = askForHash();//diff_addr<<116 | diff_addr>>12;
         // Keep the hash chain
-        hash_seed = hash_seed ^ hash_module;
+        //hash_seed = hash_seed ^ hash_module;
+        blake2_api(hash_seed, hash_seed);
         debugPrintHash("SAVE", hash_seed);
     }
 }
@@ -297,28 +560,12 @@ void disableAllFlags(){
     
 }
 
-void debugPrintHash(const char * module, __uint128_t hash) {
-    if (DEBUG) {
-        long int MSB = hash >> 64;
-        long int LSB = ((hash << 64) >> 64);
-        cout <<"[" << module << "]: "<<"Hash = 0x" << setfill('0') << setw(16) << right << hex << MSB << setfill('0') << setw(16) << right << hex << LSB <<endl;
-    }
-}
-
-
-void print_trace() {
-    int size;
-    void * symbols[CHARS];
-    char ** strings;
-    size = backtrace(symbols,CHARS);
-    strings = backtrace_symbols(symbols,size);
-
-    if (strings != NULL){
-        printf ("Obtained %d stack frames.\n", size);
-        for (int i = 0; i < size; i++)
-        printf ("%s\n", strings[i]);
-    }
-    free (strings);
+void debugPrintHash(const char * module, unsigned char * hash) {
+    cout <<"[" << module << "]: "<<"Hash = 0x";
+    size_t j;
+    for( j = 0; j < OUTBYTES; ++j )
+        printf( "%02x", hash[j] );
+    cout<<endl;
 }
 
 __uint128_t askForHash() {
