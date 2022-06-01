@@ -144,7 +144,9 @@ SchedulerOpen::SchedulerOpen(ThreadManager *thread_manager)
 	dvfsEpoch = atol(Sim()->getCfg()->getString("scheduler/open/dvfs/dvfs_epoch").c_str());
 	migrationEpoch = atol(Sim()->getCfg()->getString("scheduler/open/migration/epoch").c_str());
 	attestationEpoch = atol(Sim()->getCfg()->getString("scheduler/open/attestation/epoch").c_str());
-
+	sequencerDelay = (long) (software_delay / atoi(Sim()->getCfg()->getString("scheduler/open/attestation/hardware_speedup").c_str()));
+	sequencerDelay = (static_cast<uint>((float)sequencerDelay/1000)) * 1000; 
+	cout << "sequencer delay = " <<sequencerDelay << "ns";
 	m_core_mask.resize(Sim()->getConfig()->getApplicationCores());
 	for (core_id_t core_id = 0; core_id < (core_id_t)Sim()->getConfig()->getApplicationCores(); core_id++) {
 	       m_core_mask[core_id] = Sim()->getCfg()->getBoolArray("scheduler/open/core_mask", core_id);
@@ -1342,7 +1344,7 @@ void SchedulerOpen::periodic(SubsecondTime time) {
 
 	if ((attestationPolicy != NULL) && (time.getNS() == 2000000)) { //% attestationEpoch == 0)) {
 		cout << "\n[Scheduler]: Attestation invoked at " << formatTime(time) << endl;
-		executeAttestationPolicy();
+		//executeAttestationPolicy();
 	}
 
 	if ((migrationPolicy != NULL) && (time.getNS() % migrationEpoch == 0)) {
@@ -1414,10 +1416,10 @@ void SchedulerOpen::periodic(SubsecondTime time) {
 			cout << endl;
 		}
 	}
-	if (time.getNS() % 100000 == 0) {
-		cout << "Time "<< std::dec<< time.getUS() << "us" << endl;
+	if (time.getNS() % UInt64 (sequencerDelay) == 0) {
+		//cout << "Time "<< std::dec<< time.getNS() << "ns" << endl;
 		if (Sim()->getAttestationManager()->checkUnderAttestationGlobal()) 
-			Sim()->getAttestationManager()->updateSequencer();
+			Sim()->getAttestationManager()->updateSequencer(time);
 	}
 
 	SubsecondTime delta = time - m_last_periodic;

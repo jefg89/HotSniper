@@ -154,6 +154,9 @@ void Simulator::start()
    m_thread_manager = new ThreadManager();
    m_attestation_manager = new AttestationManager();
 
+   UInt16 elements = atoi(getCfg()->getString("scheduler/open/attestation/hardware_speedup").c_str());
+	Sim()->getAttestationManager()->setInitialElementsInQueue(elements);
+
    if (Sim()->getCfg()->getBool("traceinput/enabled"))
       m_trace_manager = new TraceManager();
    else

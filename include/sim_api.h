@@ -24,6 +24,10 @@
 #define SIM_CMD_CHALLENGE_HASH    19
 #define SIM_CMD_CHALLENGE_RESULT  20
 #define SIM_CMD_ALL_FINISHED      21
+#define SIM_CMD_SET_ATTESTATION_SW       22
+#define SIM_CMD_NOTIFY_FINISH_SW         23
+#define SIM_GET_ATTESTATION_MODE         24
+#define SIM_CMD_CHECK_ON_QUEUE           25
 
 #define SIM_OPT_INSTRUMENT_DETAILED    0
 #define SIM_OPT_INSTRUMENT_WARMUP      1
@@ -145,6 +149,10 @@
 #define SimGetRequestTurn()       SimMagic0(SIM_CMD_REQUEST_TURN)
 #define SimGetChallengeHash(arg0)     SimMagic1(SIM_CMD_CHALLENGE_HASH, arg0)
 #define SimSendChallengeResult(arg0, arg1)     SimMagic2(SIM_CMD_CHALLENGE_RESULT, arg0, arg1)
-#define SimCheckAllFinished()     SimMagic0(SIM_CMD_ALL_FINISHED)
+#define SimCheckAllFinished()         SimMagic0(SIM_CMD_ALL_FINISHED)
+#define SimNotifyFinishSW()           SimMagic0(SIM_CMD_NOTIFY_FINISH_SW)
+#define SimSetAttestationSW()         SimMagic0(SIM_CMD_SET_ATTESTATION_SW)
+#define SimGetAttestationMode()       SimMagic0(SIM_GET_ATTESTATION_MODE)
+#define SimCheckOnQueue()             SimMagic0(SIM_CMD_CHECK_ON_QUEUE)
 
 #endif /* __SIM_API */

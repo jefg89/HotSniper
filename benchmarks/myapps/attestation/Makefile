@@ -12,7 +12,7 @@ LIBS=
 #FILES=b2sum.c ../ref/blake2b-ref.c ../ref/blake2s-ref.c ../ref/blake2bp-ref.c ../ref/blake2sp-ref.c
 FILES=../BLAKE2/sse/blake2b.c ../BLAKE2/sse/blake2s.c ../BLAKE2/sse/blake2bp.c ../BLAKE2/sse/blake2sp.c
 
-$(TARGET): 
+all: 
 	g++ $(TARGET).cc $(FILES) $(HOOKS_CFLAGS) -o $(TARGET)  ../openssl/libcrypto.a
 
 clean :

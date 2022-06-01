@@ -75,7 +75,30 @@ UInt64 handleMagicInstruction(thread_id_t thread_id, UInt64 cmd, UInt64 arg0, UI
    }
    case SIM_CMD_ALL_FINISHED:
    {
+      //LOG_PRINT_WARNING("checking finished: Try nr %d", cmd);
       return Sim()->getAttestationManager()->checkAllFinished();
+   }
+
+   case SIM_CMD_SET_ATTESTATION_SW:
+   {
+      Sim()->getAttestationManager()->setAttestationSW(thread_id);
+      return 0;
+   }
+   case SIM_CMD_NOTIFY_FINISH_SW:
+   {
+      Sim()->getAttestationManager()->setFinishedSW(thread_id);
+      return 0;
+   }
+
+   //Attestation Mode: 1 means HW, 0 meas SW
+   case SIM_GET_ATTESTATION_MODE:
+   {
+      return  0;//(Sim()->getAttestationManager()->getAttestationMode());  
+   }
+
+   case SIM_CMD_CHECK_ON_QUEUE:
+   {
+      return Sim()->getAttestationManager()->checkInQueue(thread_id);
    }
    default:
       LOG_PRINT_WARNING_ONCE("Encountered unknown magic instruction cmd(%u)", cmd);

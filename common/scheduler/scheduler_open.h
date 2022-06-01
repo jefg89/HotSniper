@@ -80,6 +80,8 @@ class SchedulerOpen : public SchedulerPinnedBase {
 		long attestationEpoch;
 		void initAttestationPolicy(String policyName);
 		void executeAttestationPolicy();
+		long software_delay = 50000; 
+		long sequencerDelay;
 
 		
 };

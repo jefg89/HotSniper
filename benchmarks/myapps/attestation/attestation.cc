@@ -17,7 +17,7 @@
 
 #define OUTBYTES 64
 
-#define DEBUG 1
+#define DEBUG 0
 #define ATTACKER 0
 #define SAMPLES 1024
 #define CHARS 1024
@@ -32,7 +32,7 @@ std::vector<bool> attestation_flags = {false, false, false};
 //__uint128_t hash_seed;
 unsigned char * hash_seed;
 char * app_id;
-
+int tries = 0;
 // Vulnerable buffer
 unsigned char *save_buffer;
 
@@ -41,7 +41,7 @@ void FIRFilter(uint16_t * input, float * output);
 void encrypt(float * raw_data, unsigned char * save_buffer, const unsigned char * PRIVATE_KEY);
 void saveFile(unsigned char * encrypted_data);
 
-__uint128_t askForHash();
+void askForHash();
 void computeChallenge(uint16_t challenge);
 void enableHashComputation(uint16_t flag);
 void disableAllFlags(); 
@@ -293,10 +293,6 @@ void blake2_api(unsigned char *input, unsigned char * output ){
 // Initialization method
 // Entry point for the program
 void mainSetup() {
-    // initDev();
-    // initADC();
-    // setInts();
-    // setKey(seed);
     save_buffer = (unsigned char *) malloc(16*sizeof (unsigned char));
     hash_seed = (unsigned char *) malloc(OUTBYTES*sizeof(unsigned char));
     cout << "Entering setup" << endl;
@@ -312,13 +308,12 @@ int mainLoop(int iter) {
     SimRoiStart();
     if (DEBUG)
         cout <<"Entering main loop for " <<iter << " iterations" <<endl;
-    //while (!end) { //
     //for (size_t i = 0; i < iter; i++){
         // Attestation control code
         // Polls for attestation request by Verifier (simulator).
         // This has the same return value for all applications (true/false) -> simultaneous attestation
-        bool attestation =  false;//SimCheckAttestation();
-        bool myTurn = false;
+        bool attestation =  true;//SimCheckAttestation();
+        //if (!HW) {SimSetAttestationSW();}
         if (attestation) {
             if (DEBUG)
                 cout << "Starting atatestation" <<endl;
@@ -327,13 +322,15 @@ int mainLoop(int iter) {
             // The compute challenge method just enables specific hash calculations
             // according to the received hash id.
             computeChallenge(challenge);
-            if(attestation_flags.at(0)) {
-                //hash_seed = askForHash();
-                blake2_api(reinterpret_cast<unsigned char*>(app_id), hash_seed);
-                debugPrintHash("MAIN", hash_seed);
-                if (DEBUG)
-                    cout<< "Got challenge "<< challenge << endl;
-            }
+            // if(attestation_flags.at(0)) {
+            //     if (HW)
+            //       askForHash();
+            //     else
+            //       blake2_api(reinterpret_cast<unsigned char*>(app_id), hash_seed);
+            //debugPrintHash("MAIN", hash_seed);
+            //    if (DEBUG)
+            //        cout<< "Got challenge "<< challenge << endl;
+           //}
         }
         // END of Attestation control code
 
@@ -349,60 +346,62 @@ int mainLoop(int iter) {
             readADC(inputs);
             // Attacker injected code 
             // TODO: Use ATTACKER instead
-            if (long_id == 1) {
-                save_buffer = reinterpret_cast<unsigned char *> (inputs); 
-                goto saving_;
-            }
+            // if (long_id == 1) {
+            //     save_buffer = reinterpret_cast<unsigned char *> (inputs); 
+            //     goto saving_;
+            // }
             // Applies Low-Pass FIR Filter
-            FIRFilter(inputs, outputs);
+            //FIRFilter(inputs, outputs);
             // Encrypts private data 
-            encrypt(outputs, save_buffer, PRIVATE_KEY);
+            //encrypt(outputs, save_buffer, PRIVATE_KEY);
            
          // Finally saves into file
         saving_:
-            saveFile(save_buffer);
+            //saveFile(save_buffer);
 
 
 
-
-        for (size_t i = 0 ; i < iter; i++){
-            printf("%d \n", i);
-            if (attestation) {
-                blake2_api(hash_seed, hash_seed);
-                if (DEBUG)
-                    debugPrintHash("NODES", hash_seed);
-            }
-        }
-        
-        // Second part of attestation
-        // Sending the challenge result
+        disableAllFlags();
         if (attestation) {
-            // Send the answer back to the Verifier (simulator).
-            // uint64_t hash_msw = (hash_seed >> 64);
-            // uint64_t hash_lsw = ((hash_seed << 64) >> 64);
-            // Again, because of limitations on the simulator we have to split
-            // the hash into two arguments for the function
-            //if (SimSendChallengeResult(hash_msw, hash_lsw)) {
-        //    if (SimSendChallengeResult(0, 0)) {
-                //myTurn = false;
-                attestation = false;
-                disableAllFlags();
-            //}
-            //else {
-            //    cout<<"ERROR: Attestation FAILED"<<endl;
-            //    exit(EXIT_FAILURE);
-            //}
-        //Then wait for all the applications to finish 
-        //their attestation computation
-        //while (SimCheckAllFinished());
-        //end = true;
-        if (DEBUG)
-            cout << "All applications have finished their attestation computation" <<endl;
+          computeChallenge(3);    
         }
-        //i++;  
-    //}
-    
-    return 1;
+        for (size_t i = 0 ; i < iter; i++){
+            cout <<" Iter =  "<< i <<endl;
+          
+            readADC(inputs);
+        
+        }
+
+        // Second part of attestation
+        // Waiting for all applications to finish
+      
+       if (attestation) {
+          attestation = false;
+          //if (HW) {
+          bool finished = false;
+          while (!finished) {
+            finished = SimCheckAllFinished();
+            if (tries%100000 == 0)
+              cout<< "Finished? " << finished << " on tries " <<tries <<endl;
+            tries ++;
+          }
+          //}
+          //For software attestation
+          //else {
+          //   SimNotifyFinishSW();
+          //   bool finished = false;
+          //   while (!finished) {
+          //     finished = SimCheckAllFinished(is_hardware);
+          //     if (tries%100000 == 0)
+          //       cout<< "(SW) Finished? " << finished << " on tries " <<tries <<endl;
+          //     tries ++;
+          //   }
+          // }
+          if (DEBUG)
+              cout << "All applications have finished their attestation computation" <<endl;
+        }
+      SimRoiEnd();
+      return 1;
 } 
 
 // Actual processing methods
@@ -410,8 +409,8 @@ int mainLoop(int iter) {
 
 void readADC(uint16_t * input) {
     int64_t init_pc_addr;  
-    if (attestation_flags.at(0))
-        init_pc_addr =  reinterpret_cast<int64_t>(getPC()); // Get initial PC
+    // if (attestation_flags.at(0))
+    //     init_pc_addr =  reinterpret_cast<int64_t>(getPC()); // Get initial PC
     
     std::uniform_int_distribution<> ushort(0, 511);
     //Get N Samples
@@ -423,14 +422,32 @@ void readADC(uint16_t * input) {
             cout << "readADC under attestation " << endl;
         __uint128_t diff_addr = init_pc_addr -  reinterpret_cast<__uint128_t>(getPC()); // Get Current PC
         // Now let's build a hash relative to the PC difference (should remain constant)
-        //__uint128_t hash_module  =  askForHash();//diff_addr << 64 | (diff_addr << 120) >> 120;
+      bool proc = false;
+      int wait = 0;
+      //Check if we  have a previous request on the queue
+      if (SimCheckOnQueue())
+        //If so, let's wait until we have no previous requests
+        while (!proc) {
+          proc = !SimCheckOnQueue();
+          if (wait % 100000 == 0 && !proc)
+            cout << "waiting for " <<wait <<"iterations" <<endl;
+          wait++;
+        }
+
+      // Check if we can run in HW mode
+      bool HW = SimGetAttestationMode();
+      //If it's better for us to run on Hardware
+      // then, run on hardware. 
+      if (HW)
+        askForHash();
+      else {
+        SimSetAttestationSW();
         blake2_api(hash_seed, hash_seed);
-        // Keep the hash chain
-        //hash_seed = hash_seed ^ hash_module;
+        SimNotifyFinishSW();
         debugPrintHash("ADC", hash_seed);
+        }
     }
 }
-
 
 //Filters N SAMPLES 
 void FIRFilter(uint16_t * input, float * output) {
@@ -456,12 +473,31 @@ void FIRFilter(uint16_t * input, float * output) {
         if (DEBUG)
             cout << "FIRFilter under attestation " << endl;
         __uint128_t diff_addr = init_pc_addr -  reinterpret_cast<__uint128_t>(getPC()); // Get Current PC
-        // Now let's build a hash relative to the PC difference (should remain constant)
-        //__uint128_t hash_module  = askForHash();//diff_addr<<116 | diff_addr>>12;
-        // Keep the hash chain
-        //hash_seed = hash_seed ^ hash_module;
+
+      bool proc = false;
+      int wait = 0;
+      //Check if we  have a previous request on the queue
+      if (SimCheckOnQueue())
+        //If so, let's wait until we have no previous requests
+        while (!proc) {
+          proc = !SimCheckOnQueue();
+          if (wait % 100000 == 0 && !proc)
+            cout << "waiting for " <<wait <<"iterations" <<endl;
+          wait++;
+        }
+
+      // Check if we can run in HW mode
+      bool HW = SimGetAttestationMode();
+      //If it's better for us to run on Hardware
+      // then, run on hardware. 
+      if (HW)
+        askForHash();
+      else {
+        SimSetAttestationSW();
         blake2_api(hash_seed, hash_seed);
-        debugPrintHash("FIR", hash_seed);
+        SimNotifyFinishSW();
+        debugPrintHash("ADC", hash_seed);
+        }
     }
 }
 
@@ -485,12 +521,13 @@ void encrypt(float * raw_data, unsigned char * save_buffer, const unsigned char*
         if (DEBUG)
             cout << "encrypt under attestation " << endl;
         __uint128_t diff_addr = init_pc_addr -  reinterpret_cast<__uint128_t>(getPC()); // Get Current PC
-        // Now let's build a hash relative to the PC difference (should remain constant)
-        //__uint128_t hash_module  = askForHash();//diff_addr<<116 | diff_addr>>12;
-        // Keep the hash chain
-        //hash_seed = hash_seed ^ hash_module;
-        blake2_api(hash_seed, hash_seed);
-        debugPrintHash("ENCRYPT", hash_seed);
+        bool HW = SimGetAttestationMode();
+        if (HW)
+          askForHash();
+        else {
+          blake2_api(hash_seed, hash_seed);
+          debugPrintHash("ENCRYPT", hash_seed);
+        }
     }
 }
 
@@ -505,11 +542,13 @@ void saveFile(unsigned char * encrypted_data) {
     if (attestation_flags.at(2)) {
          if (DEBUG)
             cout << "save under attestation " << endl;
-        //__uint128_t hash_module  = askForHash();//diff_addr<<116 | diff_addr>>12;
-        // Keep the hash chain
-        //hash_seed = hash_seed ^ hash_module;
-        blake2_api(hash_seed, hash_seed);
-        debugPrintHash("SAVE", hash_seed);
+          bool HW = SimGetAttestationMode();
+          if (HW)
+            askForHash();//diff_addr<<116 | diff_addr>>12;
+          else {
+            blake2_api(hash_seed, hash_seed);
+            debugPrintHash("SAVE", hash_seed);
+        }
     }
 }
 
@@ -568,23 +607,10 @@ void debugPrintHash(const char * module, unsigned char * hash) {
     cout<<endl;
 }
 
-__uint128_t askForHash() {
-    // First request for a turn on the queue
+void askForHash() {
+    // Request for a turn on the queue and keep processing
     uint16_t ticket = SimGetRequestTurn();
     if (DEBUG){
         cout << "Got ticket " << std::dec <<ticket <<endl;
     }
-    
-    bool my_turn = false;
-    __uint128_t tmp;
-    while (!my_turn) 
-        // Wait until it's my turn on the queue
-        my_turn = SimCheckAttestationTurn(ticket); 
-    if (DEBUG)
-        cout << "It's my turn" <<endl;
-    // Due to limitiations on the simulator return size, we have to call it twice
-    tmp = SimGetChallengeHash(1); // Most Significant Word
-    tmp = tmp << 64 | SimGetChallengeHash(0); //Least Significant Word
-    return tmp;
-
 }

@@ -21,7 +21,7 @@ AttestationManager::~AttestationManager() {
 }
 
 void AttestationManager::setAttestation(thread_id_t thread_id){
-    cout <<"[Attestation Manager]: Setting Attestation for Thread " << thread_id <<endl;
+    //cout <<"[Attestation Manager]: Setting Attestation for Thread " << thread_id <<endl;
     m_curr_attest_threads.push_back(thread_id);
 }
 
@@ -49,9 +49,13 @@ UInt64 AttestationManager::getChallengeHash(thread_id_t thread_id, UInt8 word){
 }
 
 UInt16  AttestationManager::requestTurn(thread_id_t thread_id){
-    TICKETS--;
-    m_curr_attest_turn.push(static_cast<thread_id_t>(TICKETS));
-    return TICKETS;
+    if (!checkUnderAttestation(thread_id))
+        setAttestation(thread_id);
+    
+    cout <<"[Attestation Manager]: Assigning ticket " <<m_curr_tickets<< " to Thread " << thread_id <<endl;
+    m_curr_attest_turn.push_back(std::make_pair(thread_id, m_curr_tickets));
+    m_curr_tickets--;
+    return m_curr_tickets + 1;
 }
 
 bool AttestationManager::checkChallengeResult(thread_id_t thread_id, UInt128 challenge_result) {
@@ -71,28 +75,58 @@ bool AttestationManager::checkUnderAttestation(thread_id_t thread_id) {
 }
 
 bool AttestationManager::checkAttestationTurn(UInt16 ticket) {
-    return (m_curr_attest_turn.front() == ticket);
+    return (m_curr_attest_turn.front().second == ticket);
 }
 
 void AttestationManager::unsetAttestation(thread_id_t thread_id) {
     for (auto iter = m_curr_attest_threads.begin()  ; iter != m_curr_attest_threads.end() ; ){
-        if (*iter == thread_id)
+        if (*iter == thread_id) {
             iter = m_curr_attest_threads.erase(iter);
+            }
         else
             ++iter;
     }
 }
 
 bool AttestationManager::checkAllFinished() {
-    return m_curr_attest_turn.empty();
+    return m_curr_attest_turn.empty() && m_curr_sw.empty();
 }
-void AttestationManager::updateSequencer() {
+void AttestationManager::updateSequencer(SubsecondTime time) {
     if (!m_curr_attest_turn.empty()) {
-        cout << "[SEQUENCER]: Serving ticket " << std::dec <<m_curr_attest_turn.front() <<endl;
-        m_curr_attest_turn.pop();
+        cout << "[SEQUENCER] @" << (float) time.getNS()/1000 <<"us: "  <<"Serving ticket "  <<m_curr_attest_turn.front().second << " owned by thread " <<m_curr_attest_turn.front().first <<endl;
+        m_curr_attest_turn.pop_front();
+        m_curr_tickets++;
     }
 }
 
 bool AttestationManager::checkUnderAttestationGlobal() {
     return (!m_curr_attest_threads.empty());
+}
+
+void AttestationManager::setFinishedSW(thread_id_t thread_id) {
+    m_curr_sw.pop();
+}
+
+void AttestationManager::setAttestationSW(thread_id_t thread_id) {
+    m_curr_sw.push(thread_id);
+}
+UInt8 AttestationManager::getElementsInQueue() {
+    return  m_curr_attest_turn.size();
+}
+
+bool AttestationManager::checkInQueue(thread_id_t thread_id) {
+    for (auto& p : m_curr_attest_turn) {
+        if (p.first == thread_id)
+            return true;
+    }
+    return false;
+}
+
+void AttestationManager::setInitialElementsInQueue(UInt16 elements) {
+    m_curr_tickets = elements;
+    MAX_TICKETS = elements;
+}
+
+bool AttestationManager::getAttestationMode() {
+    return (getElementsInQueue() < MAX_TICKETS);   
 }
