@@ -1328,23 +1328,25 @@ void SchedulerOpen::periodic(SubsecondTime time) {
 			exit (1);
 		}
 
-		// Writting attestation-matter performance metrics to file
-		attestFile.open ("Attestation_Report.log", ios::app);
-		attestFile << std::dec <<time.getNS() <<"\t";
-		for (thread_id_t thread = 0; thread < static_cast<thread_id_t>(Sim()->getThreadManager()->getNumThreads()); thread++){
-			if (Sim()->getThreadManager()->getThreadState(thread) == 0) {
-				core_id_t t_core = Sim()->getThreadManager()->getThreadFromID(thread)->getCore()->getId();
-				attestFile<<std::dec<<performanceCounters->getIPSOfCore(t_core) << "\t";
-				}
+		if (attestationPolicy != NULL) {
+			// Writting attestation-matter performance metrics to file
+			attestFile.open ("Attestation_Report.log", ios::app);
+			attestFile << std::dec <<time.getNS() <<"\t";
+			for (thread_id_t thread = 0; thread < static_cast<thread_id_t>(Sim()->getThreadManager()->getNumThreads()); thread++){
+				if (Sim()->getThreadManager()->getThreadState(thread) == 0) {
+					core_id_t t_core = Sim()->getThreadManager()->getThreadFromID(thread)->getCore()->getId();
+					attestFile<<std::dec<<performanceCounters->getIPSOfCore(t_core) << "\t";
+					}
+			}
+			attestFile << "\n";
+			attestFile.close();
 		}
-		attestFile << "\n";
-		attestFile.close();
 	}
 	
 
 	if ((attestationPolicy != NULL) && (time.getNS() == 2000000)) { //% attestationEpoch == 0)) {
 		cout << "\n[Scheduler]: Attestation invoked at " << formatTime(time) << endl;
-		//executeAttestationPolicy();
+		executeAttestationPolicy();
 	}
 
 	if ((migrationPolicy != NULL) && (time.getNS() % migrationEpoch == 0)) {
@@ -1352,12 +1354,9 @@ void SchedulerOpen::periodic(SubsecondTime time) {
 
 		executeMigrationPolicy(time);
 	}
-/*
-	Let's just not do any DVFS stuff for now :)
-	Uncomment next block if needed
-*/
+
 	if ((dvfsPolicy != NULL) && (time.getNS() % dvfsEpoch == 0)) {
-		//cout << "\n[Scheduler]: DVFS Control Loop invoked at " << formatTime(time) << endl;
+		cout << "\n[Scheduler]: DVFS Control Loop invoked at " << formatTime(time) << endl;
 
 		executeDVFSPolicy();
 
@@ -1416,7 +1415,7 @@ void SchedulerOpen::periodic(SubsecondTime time) {
 			cout << endl;
 		}
 	}
-	if (time.getNS() % UInt64 (sequencerDelay) == 0) {
+	if ((attestationPolicy != NULL) && (time.getNS() % UInt64 (sequencerDelay) == 0)) {
 		//cout << "Time "<< std::dec<< time.getNS() << "ns" << endl;
 		if (Sim()->getAttestationManager()->checkUnderAttestationGlobal()) 
 			Sim()->getAttestationManager()->updateSequencer(time);

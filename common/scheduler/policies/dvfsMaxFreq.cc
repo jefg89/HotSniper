@@ -13,7 +13,7 @@ std::vector<int> DVFSMaxFreq::getFrequencies(const std::vector<int> &oldFrequenc
 	std::vector<int> frequencies(coreRows * coreColumns);
 
 	for (unsigned int coreCounter = 0; coreCounter < coreRows * coreColumns; coreCounter++) {
-/* 		if (activeCores.at(coreCounter)) {
+		if (activeCores.at(coreCounter)) {
 			float power = performanceCounters->getPowerOfCore(coreCounter);
 			float temperature = performanceCounters->getTemperatureOfCore(coreCounter);
 			int frequency = oldFrequencies.at(coreCounter);
@@ -24,7 +24,7 @@ std::vector<int> DVFSMaxFreq::getFrequencies(const std::vector<int> &oldFrequenc
 			cout << " f=" << frequency << " MHz";
 			cout << " T=" << fixed << setprecision(1) << temperature << " °C";
 			cout << " utilization=" << fixed << setprecision(3) << utilization << endl; 
-		} */
+		}
 		frequencies.at(coreCounter) = maxFrequency;
 	}
 
