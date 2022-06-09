@@ -14,6 +14,7 @@ all:
 	make -C noaes
 	make -C aggro
 	make -C attestation
+	make -C tcc
 
 
 # all:
