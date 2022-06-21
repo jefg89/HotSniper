@@ -3,6 +3,7 @@
 
 #include "fixed_types.h"
 #include "thread_manager.h"
+#include "performance_counters.h"
 
 class Scheduler
 {
@@ -16,6 +17,7 @@ class Scheduler
       virtual void threadYield(thread_id_t thread_id) {}
       virtual bool threadSetAffinity(thread_id_t calling_thread_id, thread_id_t thread_id, size_t cpusetsize, const cpu_set_t *mask) { return false; }
       virtual bool threadGetAffinity(thread_id_t thread_id, size_t cpusetsize, cpu_set_t *mask) { return false; }
+      virtual PerformanceCounters * getPerformanceCounters(){return NULL;}
 
    protected:
       ThreadManager *m_thread_manager;

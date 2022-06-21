@@ -28,6 +28,7 @@
 #define SIM_CMD_NOTIFY_FINISH_SW         23
 #define SIM_GET_ATTESTATION_MODE         24
 #define SIM_CMD_CHECK_ON_QUEUE           25
+#define SIM_CMD_GET_TEMPERATURE          26
 
 #define SIM_OPT_INSTRUMENT_DETAILED    0
 #define SIM_OPT_INSTRUMENT_WARMUP      1
@@ -154,5 +155,6 @@
 #define SimSetAttestationSW()         SimMagic0(SIM_CMD_SET_ATTESTATION_SW)
 #define SimGetAttestationMode()       SimMagic0(SIM_GET_ATTESTATION_MODE)
 #define SimCheckOnQueue()             SimMagic0(SIM_CMD_CHECK_ON_QUEUE)
+#define SimGetTemperature()           SimMagic0(SIM_CMD_GET_TEMPERATURE)
 
 #endif /* __SIM_API */

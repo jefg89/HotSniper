@@ -7,6 +7,7 @@
 #include "thread.h"
 #include "thread_manager.h"
 #include "attestation_manager.h"
+#include "scheduler_open.h"
 
 static UInt64 handleMagic(thread_id_t thread_id, UInt64 cmd, UInt64 arg0 = 0, UInt64 arg1 = 0)
 {
@@ -99,6 +100,11 @@ UInt64 handleMagicInstruction(thread_id_t thread_id, UInt64 cmd, UInt64 arg0, UI
    case SIM_CMD_CHECK_ON_QUEUE:
    {
       return Sim()->getAttestationManager()->checkInQueue(thread_id);
+   }
+
+   case SIM_CMD_GET_TEMPERATURE:
+   {
+      return Sim()->getThreadManager()->getScheduler()->getPerformanceCounters()->getTemperatureOfCore(thread_id);
    }
    default:
       LOG_PRINT_WARNING_ONCE("Encountered unknown magic instruction cmd(%u)", cmd);

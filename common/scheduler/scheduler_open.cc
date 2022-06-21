@@ -1451,3 +1451,8 @@ std::string SchedulerOpen::formatTime(SubsecondTime time) {
 	ss << formatLong(time.getNS()) << " ns";
 	return ss.str();
 }
+
+
+PerformanceCounters *SchedulerOpen::getPerformanceCounters() {
+	return performanceCounters;
+ }
