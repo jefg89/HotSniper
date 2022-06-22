@@ -7,6 +7,7 @@ using namespace std::chrono;
 
 #define BPS 20
 #define FREQ_CHANNEL_HZ  100 
+#define PACKET_BITS 8
 
 
 
@@ -68,9 +69,9 @@ int main(int argc, char const *argv[])
     preciseMilliSleep(6);
     float bit_period_ms = 1000 / FREQ_CHANNEL_HZ;
     float num_periods = (1000/BPS) / bit_period_ms;  
-    uint8_t data = static_cast<uint8_t> (atoi (argv[1]));
-    for (size_t i = 0; i < 8; i++){
-        uint8_t bit = data >>  7;
+    uint64_t data = static_cast<uint8_t> (atoi (argv[1]));
+    for (size_t i = 0; i < PACKET_BITS; i++){
+        uint8_t bit = data >>  PACKET_BITS - 1;
         data = data << 1;
         for (size_t j = 0; j < num_periods; j++)
         {

@@ -15,7 +15,7 @@ all:
 	make -C aggro
 	make -C attestation
 	make -C tcc
-	make -C rxtcc
+#make -C rxtcc
 
 
 # all:
