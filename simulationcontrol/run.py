@@ -13,6 +13,12 @@ import sys
 from config import NUMBER_CORES, RESULTS_FOLDER, SNIPER_CONFIG
 from resultlib.plot import create_plots
 
+#Random 
+from random import randint, seed
+from random import random
+now = datetime.datetime.now()
+seed(now.hour + now.minute + now.second)
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 SNIPER_BASE = os.path.dirname(HERE)
 BENCHMARKS = os.path.join(SNIPER_BASE, 'benchmarks')
@@ -239,7 +245,8 @@ def test_static_power():
     run(['4.0GHz', 'testStaticPower', 'slowDVFS'], get_instance('parsec-blackscholes', 3, input_set='simsmall'))
 
 def test_custom_app(appname):
-    run(['4.0GHz', 'slowDVFS', 'maxFreq'], '{}-{}-{}'.format(appname, 170, 1) + ',{}-{}-{}'.format('myapps-rxtcc', 1,1) )
+    param = str(randint(0,255))
+    run(['4.0GHz', 'slowDVFS', 'maxFreq'], '{}-{}-{}'.format(appname, param, 1)) #+ ',{}-{}-{}'.format('myapps-rxtcc', 1,1) )
     #run(['4.0GHz', 'mediumDVFS', 'maxFreq'], '{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format(appname,1000000, 1)  + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1))
 
 
