@@ -10,11 +10,6 @@
 #include <thread> 
 #include <sstream>
 
-// CUDA runtime
-// uncomment this if using cuda
-//#include <cuda_runtime.h>
-//#include <nvml.h>
-
 #define DEBUG 0
 #define SAMPLING_PERIOD_MS 1
 #define NUM_SAMPLES 50
@@ -24,7 +19,7 @@
 
 #define MIN_FREQ_CH_HZ 93
 #define MAX_FREQ_CH_HZ 105
-#define MAGNITUDE_THRESHOLD 30
+#define MAGNITUDE_THRESHOLD 22
 
 
 
