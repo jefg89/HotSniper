@@ -46,14 +46,14 @@ void encodeOne(double milli_seconds) {
         auto end = high_resolution_clock::now();
         std::chrono::duration<double, std::milli> elapsed = end-start;
         exit = elapsed.count() >= milli_seconds;
-        if (exit) cout << "One: Done processing for: " << elapsed.count() <<"ms" <<endl;
+        //if (exit) cout << "One: Done processing for: " << elapsed.count() <<"ms" <<endl;
     }
     
     start = high_resolution_clock::now();
     preciseMilliSleep(milli_seconds);
     auto end = high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed = end-start;
-    cout << "One: Done waiting for another: " << elapsed.count()<<"ms"  <<endl;
+    //cout << "One: Done waiting for another: " << elapsed.count()<<"ms"  <<endl;
 }
 
 void encodeZero(double milli_seconds) {
@@ -61,7 +61,7 @@ void encodeZero(double milli_seconds) {
     preciseMilliSleep(2*milli_seconds);
     auto end = high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed = end-start;
-    cout << "Zero: Done waiting for another: " << elapsed.count()<<"ms"  <<endl;
+    //cout << "Zero: Done waiting for another: " << elapsed.count()<<"ms"  <<endl;
     
 }
 int main(int argc, char const *argv[])
@@ -71,7 +71,7 @@ int main(int argc, char const *argv[])
     std::mt19937_64 gen(rd());
     uint64_t MAX_PACKVALUE = 1152921504606846975;
     std::uniform_int_distribution<uint64_t> distrib(0, MAX_PACKVALUE) ;
-    cout << "Hello from main " <<endl;
+    //cout << "Hello from main " <<endl;
     preciseMilliSleep(6);
     float bit_period_ms = 1000 / FREQ_CHANNEL_HZ;
     float num_periods = (1000/BPS) / bit_period_ms;  
