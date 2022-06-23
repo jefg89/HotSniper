@@ -13,13 +13,13 @@
 #define DEBUG 0
 #define SAMPLING_PERIOD_MS 1
 #define NUM_SAMPLES 50
-#define PACKET_BITS 8
+#define PACKET_BITS 64
 #define SAMPLING_FREQ 1000/SAMPLING_PERIOD_MS
 #define DFT_SIZE NUM_SAMPLES/2 + 1
 
 #define MIN_FREQ_CH_HZ 93
 #define MAX_FREQ_CH_HZ 105
-#define MAGNITUDE_THRESHOLD 22
+#define MAGNITUDE_THRESHOLD 20
 
 
 
@@ -30,9 +30,10 @@ bool start_detection = false;
 float * dft_input;
 double * dft_magnitudes;
 
-ifstream temp_file("out.log");
 
-void getTemperatures() {
+
+void getTemperatures(string name) {
+    ifstream temp_file(name);
     float old_samples [NUM_SAMPLES/2];
     float current_samples [NUM_SAMPLES];
     
@@ -129,7 +130,7 @@ void detectChannel() {
     // Detects where there is 1 or a 0 on the specified frequencies
     // MIN_FREQ_CH_HZ = left limit of channel
     // MAX_FREQ_CH_HZ = right limit of channel
-
+    ofstream out_file("received.out");
     double frequencies [DFT_SIZE];
     float sfreq_float = static_cast<float> (SAMPLING_FREQ);
     float nsamples_float =  static_cast<float> (NUM_SAMPLES);
@@ -139,7 +140,7 @@ void detectChannel() {
     bool communication = false;
     bool found = false;
     int bits = 0;
-    int packet = 0;
+    u_int64_t packet = 0;
     
     //Convert sample number into frequency
     for (size_t i = 0; i < DFT_SIZE; i++){
@@ -187,9 +188,15 @@ void detectChannel() {
                     bits++;
                 } 
             }
+            if (bits % 8 == 0) {
+                std::stringstream msg_;
+                msg_ << "******************************" <<endl;
+                std::cout << msg_.str();
+            }
             if (bits >= PACKET_BITS) {
                 std::stringstream msg_;
-                msg_ << "Received a packet = " <<std::hex <<packet <<endl;
+                msg_ << "Received a packet = " <<std::hex<<packet <<endl;
+                //out_file <<packet <<endl;
                 std::cout << msg_.str();
                 communication = false;
                 bits = 0;
@@ -206,7 +213,7 @@ int main(int argc, char const *argv[]){
     dft_magnitudes = (double *) malloc(DFT_SIZE * sizeof(double));
     
     // Thread definition
-    std::thread sampling_thread(getTemperatures);
+    std::thread sampling_thread(getTemperatures, argv[1]);
     std::thread dft_thread (doDFT);
     std::thread detection_thread (detectChannel);
     start_sampling = true;
