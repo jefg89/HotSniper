@@ -19,7 +19,7 @@
 
 #define MIN_FREQ_CH_HZ 93
 #define MAX_FREQ_CH_HZ 105
-#define MAGNITUDE_THRESHOLD 20
+#define MAGNITUDE_THRESHOLD 25 // 25 is perfect
 
 
 
@@ -196,7 +196,7 @@ void detectChannel() {
             if (bits >= PACKET_BITS) {
                 std::stringstream msg_;
                 msg_ << "Received a packet = " <<std::hex<<packet <<endl;
-                //out_file <<packet <<endl;
+                out_file <<std::hex<<packet <<endl;
                 std::cout << msg_.str();
                 communication = false;
                 bits = 0;

@@ -3,6 +3,8 @@ if [[ ! -f "results.tar" ]]; then
     echo "results.tar file does not exist"
     exit
 fi
+echo "Cleaning old files"
+rm -rf *.log *.out 
 
 tar -xvf results.tar
 
@@ -18,7 +20,7 @@ for f in *; do
         cp "$f"/PeriodicThermal.log results/"$f".log
         gzip -d "$f"/execution.log.gz 
         # replace app0 with Packet
-        cat "$f"/execution.log | grep "app0" >> sent_raw.log
+        cat "$f"/execution.log | grep "Packet" >> sent_raw.log
     fi
 done
 
@@ -33,3 +35,5 @@ mv *.out ../
 cd ..
 echo "Cleaning files"
 rm -rf results/ results_*
+
+
