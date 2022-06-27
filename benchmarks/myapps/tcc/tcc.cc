@@ -81,9 +81,9 @@ int main(int argc, char const *argv[])
     uint8_t num_packets = atoi(argv[1]);
     for (size_t i = 0; i < num_packets; i++){
         uint64_t data = distrib(gen);
-        std::cout << "Packet = " << std::hex << data <<endl;
         uint64_t header = 0xC000000000000000;
         data = data | header;
+        std::cout << "Packet = " << std::hex << data <<endl;
         for (size_t i = 0; i < PACKET_BITS; i++){
             uint8_t bit = (data >> (PACKET_BITS -1)) & 0x01; 
             data = (data << 1);
