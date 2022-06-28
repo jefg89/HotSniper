@@ -72,7 +72,8 @@ def save_output(base_configuration, benchmark, console_output, cpistack, started
               'PeriodicThermal.log',
               'PeriodicFrequency.log',
               'PeriodicVdd.log',
-              'PeriodicCPIStack.log',):
+              'PeriodicCPIStack.log',
+              'FreqReal.log',):
         with open(os.path.join(BENCHMARKS, f), 'rb') as f_in, gzip.open('{}.gz'.format(os.path.join(directory, f)), 'wb') as f_out:
             shutil.copyfileobj(f_in, f_out)
     create_plots(run)
@@ -247,7 +248,7 @@ def test_static_power():
 def test_custom_app(appname):
     #param = str(randint(128,255))
     packets = 8
-    run(['4.0GHz', 'slowDVFS', 'maxFreq'], '{}-{}-{}'.format(appname, packets, 1)) #+ ',{}-{}-{}'.format('myapps-rxtcc', 1,1) )
+    run(['4.0GHz', 'slowDVFS', 'off'], '{}-{}-{}'.format(appname, packets, 1)) #+ ',{}-{}-{}'.format('myapps-rxtcc', 1,1) )
     #run(['4.0GHz', 'mediumDVFS', 'maxFreq'], '{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format(appname,1000000, 1)  + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1))
 
 

@@ -82,7 +82,9 @@ class SchedulerOpen : public SchedulerPinnedBase {
 		void executeAttestationPolicy();
 		long software_delay = 50000; 
 		long sequencerDelay;
-
+		int beta;
+		SubsecondTime last_time;
+		void executeCountermeasure(SubsecondTime time);
 		
 };
 

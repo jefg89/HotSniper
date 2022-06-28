@@ -34,6 +34,7 @@ using namespace std;
 int k=0;
 
 ofstream attestFile;
+ofstream freqFile;
 
 String queuePolicy; //Stores Queuing Policy for Open System from base.cfg.
 String distribution; //Stores the arrival distribution of the open workload from base.cfg.
@@ -138,6 +139,7 @@ SchedulerOpen::SchedulerOpen(ThreadManager *thread_manager)
    , m_next_core(0) {
 
 	// Initialize config constants
+	beta = atoi(Sim()->getCfg()->getString("scheduler/open/dvfs/beta").c_str());
 	minFrequency = (int)(1000 * Sim()->getCfg()->getFloat("scheduler/open/dvfs/min_frequency") + 0.5);
 	maxFrequency = (int)(1000 * Sim()->getCfg()->getFloat("scheduler/open/dvfs/max_frequency") + 0.5);
 	frequencyStepSize = (int)(1000 * Sim()->getCfg()->getFloat("scheduler/open/dvfs/frequency_step_size") + 0.5);
@@ -278,6 +280,10 @@ SchedulerOpen::SchedulerOpen(ThreadManager *thread_manager)
 	initDVFSPolicy(Sim()->getCfg()->getString("scheduler/open/dvfs/logic").c_str());
 	initMigrationPolicy(Sim()->getCfg()->getString("scheduler/open/migration/logic").c_str());
 	initAttestationPolicy(Sim()->getCfg()->getString("scheduler/open/attestation/logic").c_str());
+
+	freqFile.open ("FreqReal.log", ios::app);
+	freqFile <<"Time (us) \t Frequency (MHz)" <<endl;
+	freqFile.close();
 }
 
 /** initMappingPolicy
@@ -319,7 +325,7 @@ void SchedulerOpen::initDVFSPolicy(String policyName) {
 		dvfsPolicy = new DVFSFixedPower(performanceCounters, coreRows, coreColumns, minFrequency, maxFrequency, frequencyStepSize, perCorePowerBudget);
 	} else if (policyName == "tsp") {
 		dvfsPolicy = new DVFSTSP(thermalModel, performanceCounters, coreRows, coreColumns, minFrequency, maxFrequency, frequencyStepSize);
-	} //else if (policyName ="XYZ") {... } //Place to instantiate a new DVFS logic. Implementation is put in "policies" package.
+	}//else if (policyName ="XYZ") {...} //Place to instantiate a new DVFS logic. Implementation is put in "policies" package.
 	else {
 		cout << "\n[Scheduler] [Error]: Unknown DVFS Algorithm" << endl;
  		exit (1);
@@ -1343,7 +1349,12 @@ void SchedulerOpen::periodic(SubsecondTime time) {
 		}
 	}
 	
-
+	if ((time.getNS() > 50000) & (time.getNS() % 5000 == 0))  {
+		freqFile.open ("FreqReal.log", ios::app);
+		executeCountermeasure(time);
+		freqFile.close();
+	
+	}
 	if ((attestationPolicy != NULL) && (time.getNS() == 2000000)) { //% attestationEpoch == 0)) {
 		cout << "\n[Scheduler]: Attestation invoked at " << formatTime(time) << endl;
 		executeAttestationPolicy();
@@ -1455,4 +1466,34 @@ std::string SchedulerOpen::formatTime(SubsecondTime time) {
 
 PerformanceCounters *SchedulerOpen::getPerformanceCounters() {
 	return performanceCounters;
+ }
+
+void SchedulerOpen::executeCountermeasure(SubsecondTime time) {
+	SubsecondTime delta = time - last_time;
+	int targetFrequency;
+	float tup = 1000.0/ (beta + 1);
+	float tdown = 1000 - tup;
+	if (delta.getUS() < tdown)
+		targetFrequency = minFrequency;
+	else {
+		targetFrequency = maxFrequency;
+	}
+
+	if (delta.getUS() >= 1000)  {
+		//cout << "Resetting last_time" <<endl;
+		last_time = time;
+	}
+	std::vector<int> oldFrequencies;
+	std::vector<bool> activeCores;
+	for (int coreCounter = 0; coreCounter < numberOfCores; coreCounter++) {
+		oldFrequencies.push_back(Sim()->getMagicServer()->getFrequency(coreCounter));
+	    static bool reserved_cores_are_active = Sim()->getCfg()->getBool("scheduler/open/dvfs/reserved_cores_are_active");
+		activeCores.push_back(reserved_cores_are_active ? isAssignedToTask(coreCounter) : isAssignedToThread(coreCounter));
+	}
+	vector<int> frequencies = oldFrequencies;
+	frequencies.at(0) = targetFrequency;
+	setFrequency(0, frequencies.at(0));
+	performanceCounters->notifyFreqsOfCores(frequencies);
+	//cout << "[Countermeasure: ] Time: " << time.getUS() << " Freq = " << frequencies.at(0) << endl;
+	freqFile << time.getUS() << " \t" << frequencies.at(0) << endl;
  }
