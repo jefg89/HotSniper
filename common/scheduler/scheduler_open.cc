@@ -49,6 +49,8 @@ int numberOfCores; //Stores the number of cores in the system.
 
 int coreRequirementTranslation (String compositionString);
 
+int targetFrequency;
+
 //This data structure maintains the state of the tasks.
 struct openTask {
 
@@ -1349,7 +1351,7 @@ void SchedulerOpen::periodic(SubsecondTime time) {
 		}
 	}
 	
-	if ((time.getNS() > 50000) & (time.getNS() % 5000 == 0))  {
+	if ((time.getNS() > 50000) & (time.getNS() % 25000 == 0))  {
 		freqFile.open ("FreqReal.log", ios::app);
 		executeCountermeasure(time);
 		freqFile.close();
@@ -1470,19 +1472,9 @@ PerformanceCounters *SchedulerOpen::getPerformanceCounters() {
 
 void SchedulerOpen::executeCountermeasure(SubsecondTime time) {
 	SubsecondTime delta = time - last_time;
-	int targetFrequency;
-	float tup = 1000.0/ (beta + 1);
-	float tdown = 1000 - tup;
-	if (delta.getUS() < tdown)
-		targetFrequency = minFrequency;
-	else {
-		targetFrequency = maxFrequency;
-	}
-
-	if (delta.getUS() >= 1000)  {
-		//cout << "Resetting last_time" <<endl;
-		last_time = time;
-	}
+	
+	
+	// Getting current frequencies 
 	std::vector<int> oldFrequencies;
 	std::vector<bool> activeCores;
 	for (int coreCounter = 0; coreCounter < numberOfCores; coreCounter++) {
@@ -1490,10 +1482,44 @@ void SchedulerOpen::executeCountermeasure(SubsecondTime time) {
 	    static bool reserved_cores_are_active = Sim()->getCfg()->getBool("scheduler/open/dvfs/reserved_cores_are_active");
 		activeCores.push_back(reserved_cores_are_active ? isAssignedToTask(coreCounter) : isAssignedToThread(coreCounter));
 	}
+
+
+	 //Policy code here
+	float averageTemp = 66.5;
+	int freqStep = 100; //100 MHz step 
+	core_id_t txCore = 0;
+	float currentTemp = performanceCounters->getTemperatureOfCore(txCore);
+	int currentFrequency = oldFrequencies.at(txCore);
+
+	if (currentTemp > averageTemp) 
+		targetFrequency = currentFrequency - freqStep;
+	else
+		targetFrequency = currentFrequency + freqStep;
+	
+	if (targetFrequency > maxFrequency) targetFrequency = maxFrequency;
+	if (targetFrequency < minFrequency) targetFrequency = minFrequency;
+
+
+
+	// PAPER policy
+	// float tup = 1000.0/ (beta + 1);
+	// float tdown = 1000 - tup;
+	// if (delta.getUS() < tdown)
+	// 	targetFrequency = minFrequency;
+	// else {
+	// 	targetFrequency = maxFrequency;
+	// }
+
+	// if (delta.getUS() >= 1000)  {
+	// 	//cout << "Resetting last_time" <<endl;
+	// 	last_time = time;
+	// }
+	
+	// Frequency enforcement 
 	vector<int> frequencies = oldFrequencies;
-	frequencies.at(0) = targetFrequency;
-	setFrequency(0, frequencies.at(0));
+	frequencies.at(txCore) = targetFrequency;
+	setFrequency(txCore, frequencies.at(txCore));
 	performanceCounters->notifyFreqsOfCores(frequencies);
-	//cout << "[Countermeasure: ] Time: " << time.getUS() << " Freq = " << frequencies.at(0) << endl;
-	freqFile << time.getUS() << " \t" << frequencies.at(0) << endl;
+	cout << "[Countermeasure: ] Time: " << time.getUS() << " Freq = " << frequencies.at(0) << endl;
+	freqFile << time.getUS() << " \t" << frequencies.at(txCore) << endl;
  }
