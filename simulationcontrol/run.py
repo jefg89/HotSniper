@@ -239,12 +239,13 @@ def test_static_power():
     run(['4.0GHz', 'testStaticPower', 'slowDVFS'], get_instance('parsec-blackscholes', 3, input_set='simsmall'))
 
 def test_custom_app(appname):
-    run(['4.0GHz', 'fastDVFS', 'maxFreq'], '{}-{}-{}'.format(appname, 50, 1) + ',{}-{}-{}'.format(appname, 50, 1))
+    #run(['4.0GHz', 'slowDVFS', 'maxFreq'], '{}-{}-{}'.format(appname, 100, 1, "no attack")) 
+    run(['4.0GHz', 'slowDVFS', 'maxFreq'], '{}-{}-{}'.format(appname, 100, 1) + "," +  get_instance('parsec-blackscholes', 3, input_set='simsmall'))
     #run(['4.0GHz', 'mediumDVFS', 'maxFreq'], '{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format(appname,1000000, 1)  + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1))
 
 
 def main():
-    test_custom_app('myapps-attestation')
+    test_custom_app('myapps-simproc')
     #example()
     #test_static_power()
 
