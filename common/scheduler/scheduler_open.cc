@@ -11,6 +11,7 @@
 #include "performance_model.h"
 #include "magic_server.h"
 #include "thread_manager.h"
+#include "stats.h"
 
 #include "policies/dvfsMaxFreq.h"
 #include "policies/dvfsFixedPower.h"
@@ -34,6 +35,7 @@ using namespace std;
 int k=0;
 
 ofstream attestFile;
+ofstream cacheMetrics;
 
 String queuePolicy; //Stores Queuing Policy for Open System from base.cfg.
 String distribution; //Stores the arrival distribution of the open workload from base.cfg.
@@ -146,7 +148,13 @@ SchedulerOpen::SchedulerOpen(ThreadManager *thread_manager)
 	attestationEpoch = atol(Sim()->getCfg()->getString("scheduler/open/attestation/epoch").c_str());
 	sequencerDelay = (long) (software_delay / atoi(Sim()->getCfg()->getString("scheduler/open/attestation/hardware_speedup").c_str()));
 	sequencerDelay = (static_cast<uint>((float)sequencerDelay/1000)) * 1000; 
-	cout << "sequencer delay = " <<sequencerDelay << "ns";
+	
+	cacheMetrics.open("cacheMetrics.log",  ios::app);
+	cacheMetrics << "accesses_l1d" << "\t" << "load_misses_l1d" << "\t" << "store_misses_l1d" << "\t" << "total_misses_l1d" << "\t"
+	<<  "accesses_l2" << "\t" << "load_misses_l2"  << "\t" <<  "store_misses_l2" << "\t" <<  "total_misses_l2" << endl;
+	cacheMetrics.close();
+
+
 	m_core_mask.resize(Sim()->getConfig()->getApplicationCores());
 	for (core_id_t core_id = 0; core_id < (core_id_t)Sim()->getConfig()->getApplicationCores(); core_id++) {
 	       m_core_mask[core_id] = Sim()->getCfg()->getBoolArray("scheduler/open/core_mask", core_id);
@@ -1328,6 +1336,27 @@ void SchedulerOpen::periodic(SubsecondTime time) {
 			exit (1);
 		}
 
+		if (time.getNS() % 1000000 == 0) {
+			UInt64 accesses_l1d = Sim()->getStatsManager()->getMetricObject("L1-D", 0, "loads")->recordMetric() +
+								  Sim()->getStatsManager()->getMetricObject("L1-D", 0, "stores")->recordMetric();
+
+			UInt64 load_misses_l1d = Sim()->getStatsManager()->getMetricObject("L1-D", 0, "load-misses")->recordMetric();
+			UInt64 store_misses_l1d= Sim()->getStatsManager()->getMetricObject("L1-D", 0, "store-misses")->recordMetric();
+			UInt64 total_misses_l1d = load_misses_l1d + store_misses_l1d;
+
+			UInt64 accesses_l2 = Sim()->getStatsManager()->getMetricObject("L2", 0, "loads")->recordMetric() +
+								  Sim()->getStatsManager()->getMetricObject("L2", 0, "stores")->recordMetric();
+
+			UInt64 load_misses_l2  = Sim()->getStatsManager()->getMetricObject("L2", 0, "load-misses")->recordMetric();
+			UInt64 store_misses_l2 = Sim()->getStatsManager()->getMetricObject("L2", 0, "store-misses")->recordMetric();
+			UInt64 total_misses_l2 = load_misses_l2+ store_misses_l2;
+			
+			cacheMetrics.open("cacheMetrics.log",  ios::app);
+			cacheMetrics << accesses_l1d << "\t" << load_misses_l1d << "\t" << store_misses_l1d << "\t" << total_misses_l1d << "\t"
+						 <<  accesses_l2 << "\t" << load_misses_l2  << "\t" <<  store_misses_l2 << "\t" <<  total_misses_l2 << endl;
+			cacheMetrics.close();
+		}
+		
 		if (attestationPolicy != NULL) {
 			// Writting attestation-matter performance metrics to file
 			attestFile.open ("Attestation_Report.log", ios::app);
@@ -1343,7 +1372,6 @@ void SchedulerOpen::periodic(SubsecondTime time) {
 		}
 	}
 	
-
 	if ((attestationPolicy != NULL) && (time.getNS() == 2000000)) { //% attestationEpoch == 0)) {
 		cout << "\n[Scheduler]: Attestation invoked at " << formatTime(time) << endl;
 		executeAttestationPolicy();
@@ -1451,3 +1479,5 @@ std::string SchedulerOpen::formatTime(SubsecondTime time) {
 	ss << formatLong(time.getNS()) << " ns";
 	return ss.str();
 }
+
+
