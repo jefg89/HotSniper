@@ -18,7 +18,7 @@
 #define OUTBYTES 64
 
 #define DEBUG 1
-#define ATTACKER 0
+#define ATTACKER 1
 #define SAMPLES 1024
 #define CHARS 1024
 const unsigned char PRIVATE_KEY[16] = "123456789abcdef";
@@ -78,13 +78,22 @@ int mainLoop(int iter) {
             // Attacker injected code 
             // TODO: Use ATTACKER instead
             //if (long_id == 1) {
-            if (ATTACKER == 1) {
-                saveFile (reinterpret_cast<unsigned char *> (inputs)); 
-                goto exit_;
-                //goto saving_;
-            }
+
+            //***OG attacker position here
+            // if (ATTACKER == 1) {
+            //     saveFile (reinterpret_cast<unsigned char *> (inputs)); 
+            //     goto exit_;
+            //     //goto saving_;
+            // }
+
             // Applies Low-Pass FIR Filter
             FIRFilter(inputs, outputs);
+
+            if (ATTACKER == 1) {
+                saveFile (reinterpret_cast<unsigned char *> (outputs)); 
+                goto exit_;
+            }
+            
             // Encrypts private data 
             encrypt(outputs, save_buffer, PRIVATE_KEY);
            

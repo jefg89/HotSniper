@@ -149,9 +149,8 @@ SchedulerOpen::SchedulerOpen(ThreadManager *thread_manager)
 	sequencerDelay = (long) (software_delay / atoi(Sim()->getCfg()->getString("scheduler/open/attestation/hardware_speedup").c_str()));
 	sequencerDelay = (static_cast<uint>((float)sequencerDelay/1000)) * 1000; 
 	
-	cacheMetrics.open("cacheMetrics.log",  ios::app);
-	cacheMetrics << "accesses_l1d" << "\t" << "load_misses_l1d" << "\t" << "store_misses_l1d" << "\t" << "total_misses_l1d" << "\t"
-	<<  "accesses_l2" << "\t" << "load_misses_l2"  << "\t" <<  "store_misses_l2" << "\t" <<  "total_misses_l2" << endl;
+	cacheMetrics.open("cacheMetrics.log",  ios::out | ios::trunc);
+	cacheMetrics << "c0" << "\t" << "c1" << "\t" << "c2" << "\t" << "c3" << endl;
 	cacheMetrics.close();
 
 
@@ -949,9 +948,8 @@ void SchedulerOpen::threadExit(thread_id_t thread_id, SubsecondTime time) {
 			
 		cout << "\n[Scheduler][Result]: Task " << app_id << " (Response/Service/Wait) Time (ns) "  << " :\t" << std::dec  << time.getNS() - openTasks[app_id].taskArrivalTime << "\t" <<  time.getNS() - openTasks[app_id].taskStartTime << "\t" << openTasks[app_id].taskStartTime - openTasks[app_id].taskArrivalTime << "\n";
 	
-	}
-	
-	if (numberOfFreeCores () == numberOfCores && numberOfTasksWaitingToSchedule () != 0) {
+	}	
+	if (numberOfFreeCores () == numberOfCores && numberOfTasksWaitingToSchedule () != 0) {  // TODO:Possible bug here comment numberOfTasksWaitingToSchedule () != 0)
 		cout << "\n[Scheduler]: System Going Empty ... Prefetching Tasks\n"; //Without Prefectching Sniper will Deadlock or End Prematurely.
 
 		if (numberOfTasksInQueue () != 0) {
@@ -1337,23 +1335,31 @@ void SchedulerOpen::periodic(SubsecondTime time) {
 		}
 
 		if (time.getNS() % 1000000 == 0) {
-			UInt64 accesses_l1d = Sim()->getStatsManager()->getMetricObject("L1-D", 0, "loads")->recordMetric() +
+			UInt64 accesses_c0 = Sim()->getStatsManager()->getMetricObject("L1-D", 0, "loads")->recordMetric() +
 								  Sim()->getStatsManager()->getMetricObject("L1-D", 0, "stores")->recordMetric();
+			UInt64 accesses_c1 = Sim()->getStatsManager()->getMetricObject("L1-D", 1, "loads")->recordMetric() +
+								  Sim()->getStatsManager()->getMetricObject("L1-D", 1, "stores")->recordMetric();
 
-			UInt64 load_misses_l1d = Sim()->getStatsManager()->getMetricObject("L1-D", 0, "load-misses")->recordMetric();
-			UInt64 store_misses_l1d= Sim()->getStatsManager()->getMetricObject("L1-D", 0, "store-misses")->recordMetric();
-			UInt64 total_misses_l1d = load_misses_l1d + store_misses_l1d;
+			UInt64 accesses_c2 = Sim()->getStatsManager()->getMetricObject("L1-D", 2, "loads")->recordMetric() +
+								  Sim()->getStatsManager()->getMetricObject("L1-D", 2, "stores")->recordMetric();
 
-			UInt64 accesses_l2 = Sim()->getStatsManager()->getMetricObject("L2", 0, "loads")->recordMetric() +
-								  Sim()->getStatsManager()->getMetricObject("L2", 0, "stores")->recordMetric();
 
-			UInt64 load_misses_l2  = Sim()->getStatsManager()->getMetricObject("L2", 0, "load-misses")->recordMetric();
-			UInt64 store_misses_l2 = Sim()->getStatsManager()->getMetricObject("L2", 0, "store-misses")->recordMetric();
-			UInt64 total_misses_l2 = load_misses_l2+ store_misses_l2;
+			UInt64 accesses_c3 = Sim()->getStatsManager()->getMetricObject("L1-D", 3, "loads")->recordMetric() +
+								  Sim()->getStatsManager()->getMetricObject("L1-D", 3, "stores")->recordMetric();
+
+			// UInt64 load_misses_l1d = Sim()->getStatsManager()->getMetricObject("L1-D", 0, "load-misses")->recordMetric();
+			// UInt64 store_misses_l1d= Sim()->getStatsManager()->getMetricObject("L1-D", 0, "store-misses")->recordMetric();
+			// UInt64 total_misses_l1d = load_misses_l1d + store_misses_l1d;
+
+			// UInt64 accesses_l2 = Sim()->getStatsManager()->getMetricObject("L2", 0, "loads")->recordMetric() +
+			// 					  Sim()->getStatsManager()->getMetricObject("L2", 0, "stores")->recordMetric();
+
+			// UInt64 load_misses_l2  = Sim()->getStatsManager()->getMetricObject("L2", 0, "load-misses")->recordMetric();
+			// UInt64 store_misses_l2 = Sim()->getStatsManager()->getMetricObject("L2", 0, "store-misses")->recordMetric();
+			// UInt64 total_misses_l2 = load_misses_l2+ store_misses_l2;
 			
 			cacheMetrics.open("cacheMetrics.log",  ios::app);
-			cacheMetrics << accesses_l1d << "\t" << load_misses_l1d << "\t" << store_misses_l1d << "\t" << total_misses_l1d << "\t"
-						 <<  accesses_l2 << "\t" << load_misses_l2  << "\t" <<  store_misses_l2 << "\t" <<  total_misses_l2 << endl;
+			cacheMetrics << accesses_c0 << "\t" << accesses_c1  << "\t" << accesses_c2  << "\t" << accesses_c3  << endl;
 			cacheMetrics.close();
 		}
 		

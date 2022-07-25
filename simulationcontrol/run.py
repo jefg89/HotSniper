@@ -66,7 +66,8 @@ def save_output(base_configuration, benchmark, console_output, cpistack, started
               'PeriodicThermal.log',
               'PeriodicFrequency.log',
               'PeriodicVdd.log',
-              'PeriodicCPIStack.log',):
+              'PeriodicCPIStack.log',
+              'cacheMetrics.log',):
         with open(os.path.join(BENCHMARKS, f), 'rb') as f_in, gzip.open('{}.gz'.format(os.path.join(directory, f)), 'wb') as f_out:
             shutil.copyfileobj(f_in, f_out)
     create_plots(run)
@@ -239,13 +240,17 @@ def test_static_power():
     run(['4.0GHz', 'testStaticPower', 'slowDVFS'], get_instance('parsec-blackscholes', 3, input_set='simsmall'))
 
 def test_custom_app(appname):
-    #run(['4.0GHz', 'slowDVFS', 'maxFreq'], '{}-{}-{}'.format(appname, 100, 1, "no attack")) 
-    run(['4.0GHz', 'slowDVFS', 'maxFreq'], '{}-{}-{}'.format(appname, 100, 1) + "," +  get_instance('parsec-blackscholes', 3, input_set='simsmall'))
-    #run(['4.0GHz', 'mediumDVFS', 'maxFreq'], '{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format(appname,1000000, 1)  + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 1000000000,1) + ',{}-{}-{}'.format('myapps-my_pi', 100000000,1))
-
+    run(['4.0GHz', 'slowDVFS', 'maxFreq'], '{}-{}-{}'.format(appname, 100, 1, "no attack"))  #app
+    # run(['4.0GHz', 'slowDVFS', 'maxFreq'],   get_instance('parsec-blackscholes', 3, input_set='simsmall') + ',{}-{}-{}'.format(appname, 100, 1))   # ccc+ app
+    # run(['4.0GHz', 'slowDVFS', 'maxFreq'],  get_instance('parsec-blackscholes', 2, input_set='simsmall') + ',{}-{}-{}'.format(appname, 100, 1))  # cc + app
+    # run(['4.0GHz', 'slowDVFS', 'maxFreq'],  get_instance('parsec-streamcluster', 2, input_set='simsmall') + ',{}-{}-{}'.format(appname, 100, 1)) #  mm + app
+    # run(['4.0GHz', 'slowDVFS', 'maxFreq'],  get_instance('parsec-streamcluster', 3, input_set='simsmall') + ',{}-{}-{}'.format(appname, 100, 1)) # mmm + app
+    #run(['4.0GHz', 'slowDVFS', 'maxFreq'],  get_instance('parsec-blackscholes', 2, input_set='simsmall') + ',{}-{}-{}'.format(appname, 100, 1) + "," +  get_instance('parsec-streamcluster', 2, input_set='simsmall'))
+    #run(['4.0GHz', 'slowDVFS', 'maxFreq'],  get_instance('parsec-blackscholes', 3, input_set='simsmall') + ',{}-{}-{}'.format(appname, 100, 1) + "," +  get_instance('parsec-streamcluster', 2, input_set='simsmall'))
+    #run(['4.0GHz', 'slowDVFS', 'maxFreq'],  get_instance('parsec-blackscholes', 2, input_set='simsmall') + ',{}-{}-{}'.format(appname, 100, 1) + "," +  get_instance('parsec-streamcluster', 3, input_set='simsmall'))
 
 def main():
-    test_custom_app('myapps-simproc')
+    test_custom_app('myapps-server') #simproc')
     #example()
     #test_static_power()
 

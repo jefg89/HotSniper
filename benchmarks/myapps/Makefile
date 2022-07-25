@@ -9,7 +9,7 @@ SUBDIRS = $(shell ls -d */)
 all:
 	make -C tools
 	make -C pi
-# cd openssl && ./config && make -j8
+	cd openssl && ./config && make -j8
 	make -C aes
 	make -C noaes
 	make -C aggro
